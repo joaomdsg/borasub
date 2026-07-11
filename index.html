@@ -207,7 +207,7 @@ function weekRaw(arr){let r=0,run=0;for(const s of arr){if(s>=GOOD){run++;r+=s*r
 function runs(arr){const o=[];let st=-1;for(let i=0;i<=arr.length;i++){const g=i<arr.length&&arr[i]>=GOOD;if(g&&st<0)st=i;if(!g&&st>=0){o.push([st,i-1]);st=-1}}return o}
 function bestRun(arr){let b=[0,-1];for(const r of runs(arr))if(r[1]-r[0]>b[1]-b[0])b=r;return b}
 
-let DATA=null, DAYS=[], mode="week", sel="N", rankBy="pesca";
+let DATA=null, DAYS=[], mode="week", sel="", rankBy="pesca";
 
 async function load(){
   document.getElementById('status').innerHTML=`<span class="spin"></span>A perguntar aos modelos (${SWMODELS.map(m=>m.key).join(" · ")})…`;
@@ -254,7 +254,7 @@ async function load(){
   });
   const windTxt=wd?"":" · vento indisponível (visibilidade limitada)";
   document.getElementById('status').innerHTML=`<b>Ao vivo.</b> ${DAYS[0].iso} → ${DAYS[DAYS.length-1].iso} · ${ok.length} modelo(s) a votar: ${LOADED}${windTxt} · ${new Date().toLocaleString('pt-PT')}`;
-  buildSeg(); setMode("week"); select("N");
+  buildSeg(); setMode("week");
 }
 
 function confTier(spread){return spread<0.6?["alta","#2fe3a0","●"]:spread<1.3?["média","#e0b243","◐"]:["baixa","#c2453a","○"]}
@@ -323,6 +323,7 @@ function drawOverlay(){
 }
 function panel(){
   const z=ZONES.find(x=>x.id===sel),p=document.getElementById('pan'),isW=mode==="week";
+  if(!z){p.innerHTML=`<div class="z-face">escolhe uma zona</div><div class="z-name" style="color:var(--muted);font-weight:500">Toca numa marca do mapa (ou na classificação) para veres pescabilidade, visibilidade e os 3 modelos.</div>`;return}
   const sp=spreadOf(z),[ct,cc,cg]=confTier(sp);
   const br=bestRun(z.rounds),has=br[1]>=br[0];
   const win=has?`<b>${br[1]-br[0]+1} dia(s) seguidos</b> — ${DSHORT_lbl(br[0])}${br[1]>br[0]?"–"+DSHORT_lbl(br[1]):""}`:"nenhuma — fica em casa";
