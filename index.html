@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>borasub · Vai ou não vai!?</title>
+<style>
+  :root{
+    --sea-0:#071620;--sea-1:#0a2130;--sea-2:#0e2c3f;
+    --ink:#eaf4f4;--muted:#7f9aa4;--faint:#4d6772;--line:#1d3a48;
+    --aqua:#2fe3a0;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--sea-0);color:var(--ink);font-family:var(--sans)}
+  .wrap{max-width:1060px;margin:0 auto;padding:22px 18px 40px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--aqua);margin:0 0 6px}
+  h1{font-size:clamp(30px,7vw,52px);line-height:.95;margin:0 0 2px;font-weight:800;letter-spacing:-.02em}
+  .tag{display:block;font-family:var(--mono);font-size:clamp(15px,3.4vw,22px);font-weight:600;letter-spacing:-.01em;color:var(--aqua);margin:2px 0 8px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 4px;max-width:70ch}
+  .status{font-family:var(--mono);font-size:11px;color:var(--faint);margin:8px 0 16px}
+  .status b{color:var(--aqua);font-weight:600}
+  .ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+  .btn{font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--sea-1);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+  .btn:hover{color:var(--ink);background:var(--sea-2)}
+  .btn[aria-pressed="true"]{color:var(--sea-0);background:var(--aqua);border-color:transparent;font-weight:600}
+  .btn.week[aria-pressed="true"]{background:var(--ink)}
+  .refresh{margin-left:auto;color:var(--aqua)}
+  .meta{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:18px;margin:6px 0 14px}
+  .meta b{color:var(--ink)}
+  .stage{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+  @media(max-width:720px){.stage{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--sea-1),var(--sea-0));border:1px solid var(--line);border-radius:16px}
+  svg{display:block;width:100%;height:auto}
+  .mk{cursor:pointer}
+  .mk-dot{stroke:#04141c;stroke-width:2;transition:.25s}
+  .mk-ring{fill:none;stroke:var(--ink);stroke-width:2;opacity:0}
+  .mk[data-sel="1"] .mk-ring{opacity:1}
+  .mk-conf{fill:none;stroke-width:2;stroke-dasharray:3 3}
+  .mk-num{font-family:var(--mono);font-weight:700;font-size:13px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3px}
+  .mk-tag{font-family:var(--mono);font-size:11px;fill:var(--ink);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3.5px}
+  .pan{padding:15px}
+  .z-face{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--aqua)}
+  .z-name{font-size:18px;font-weight:600;margin:2px 0 0}
+  .z-spots{color:var(--muted);font-size:12px;margin:2px 0 0}
+  .read{display:flex;align-items:baseline;gap:8px;margin:8px 0 4px}
+  .r-num{font-family:var(--mono);font-size:40px;font-weight:700;line-height:1}
+  .r-unit{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .conf-pill{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:10px;margin-left:2px}
+  .verd{font-size:13px;line-height:1.5;color:#d6e6e6;border-left:2px solid var(--line);padding-left:10px;margin-top:6px}
+  .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
+  .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .cell .d{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .bar{width:100%;height:42px;border-radius:5px;background:#0c2330;display:flex;align-items:flex-end;position:relative;overflow:hidden}
+  .bar i{display:block;width:100%;border-radius:5px}
+  .bar.low::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,.28) 3px,rgba(0,0,0,.28) 6px)}
+  .cell .sv{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .models{margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .models .row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--line)}
+  .models .row span:last-child{color:var(--ink)}
+  .rank{margin-top:16px;padding:12px 15px}
+  .rank h3{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 8px;font-weight:600}
+  .rr{display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer;border-radius:8px}
+  .rr:hover{background:var(--sea-1)}
+  .rr .rk{font-family:var(--mono);font-size:11px;color:var(--faint);width:16px}
+  .rr .nm{font-size:13px;width:150px}
+  .rr .track{flex:1;height:8px;background:#0c2330;border-radius:5px;overflow:hidden}
+  .rr .fill{display:block;height:100%;border-radius:5px}
+  .rr .sc{font-family:var(--mono);font-size:12px;width:52px;text-align:right}
+  .rr .cf{font-family:var(--mono);font-size:14px;width:20px;text-align:center}
+  .foot{margin-top:20px;font-size:11.5px;line-height:1.55;color:var(--muted)}
+  .foot b{color:var(--ink)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:10px 0;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+  .err{background:#3a1414;border:1px solid #7a2a2a;color:#f3c6c6;border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.5;margin:12px 0}
+  .err code{background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--aqua);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Ilha Terceira · caça submarina</p>
+  <h1>borasub</h1>
+  <span class="tag">Vai ou não vai!?</span>
+  <p class="sub">3 modelos de ondulação a discutir onde é que a água está pescável — hoje e nos próximos 7 dias. Concordam → confia. Discordam → a marca fica esbatida e a decisão é tua.</p>
+  <div class="status" id="status"><span class="spin"></span>A perguntar aos modelos se hoje vale a pena…</div>
+
+  <div class="ctrl" id="seg"></div>
+  <div class="meta" id="meta"></div>
+
+  <div class="stage">
+    <div class="card">
+      <svg viewBox="0 0 800 520" role="img" aria-label="Mapa da Terceira com score por zona">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+        </defs>
+        <rect x="0" y="0" width="800" height="520" fill="var(--sea-0)"/>
+        <g transform="translate(744,58)">
+          <circle r="20" fill="none" stroke="var(--faint)"/>
+          <path d="M0,-20 L4,0 L-4,0 Z" fill="var(--muted)"/>
+          <text x="0" y="-25" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--muted)">N</text>
+        </g>
+        <path id="island" fill="#16232b" stroke="#2c4551" stroke-width="1.5" stroke-linejoin="round" d=""/>
+        <text x="360" y="250" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--faint)">Terceira</text>
+        <g id="swell" color="#63d9ff" opacity="0"></g>
+        <g id="wind" color="#e0b243" opacity="0"></g>
+        <g id="markers"></g>
+      </svg>
+    </div>
+    <div class="card"><div class="pan" id="pan"></div></div>
+  </div>
+
+  <div class="card rank">
+    <h3 id="rt">Classificação — consenso 7 dias</h3>
+    <div id="rl"></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:#E24B4A"></span>Mau</span>
+    <span><span class="sw" style="background:#EF9F27"></span>Fraco</span>
+    <span><span class="sw" style="background:#97C459"></span>Bom</span>
+    <span><span class="sw" style="background:#2fe3a0"></span>Ótimo</span>
+    <span style="color:var(--faint)">● alta · ◐ média · ○ baixa concordância</span>
+  </div>
+
+  <div class="foot">
+    <p><b>Como funciona.</b> Para cada dia, cada modelo dá 0–3 a cada zona a partir da ondulação (direção/altura vs. exposição da costa, por interseção geométrica com a ilha) e do vento (offshore/onshore + intensidade). O que vês é a <b>média dos modelos</b>; a confiança vem de quanto concordam entre si (concordam → alta). O score de 7 dias premeia dias bons seguidos. Verde = bora, vermelho = fica em casa.</p>
+    <p style="margin-top:8px"><b>Fontes (Open-Meteo, ao vivo).</b> Ondulação: MFWAM (MétéoFrance/Copernicus, ~8 km), ECMWF-WAM (0,25°), GFS-Wave (NOAA, 0,25°). Vento: MétéoFrance, ECMWF-IFS, GFS. Nenhum modelo regional de alta resolução cobre os Açores, por isso o consenso + a boia da Praia da Vitória são o melhor caminho. Segurança: bóia, apneia, reservas e tamanhos mínimos; caça por fora da baía de Angra.</p>
+  </div>
+</div>
+
+<script>
+const LAT=38.72, LON=-27.22;
+const ISLAND="M312,66 L325,71 L332,69 L342,80 L357,76 L366,94 L372,89 L390,89 L390,85 L389,83 L388,80 L393,72 L403,78 L407,75 L415,84 L419,72 L427,85 L430,79 L440,88 L452,82 L462,90 L486,94 L512,107 L519,108 L522,100 L529,115 L538,103 L546,107 L549,118 L555,113 L559,117 L598,108 L675,166 L680,205 L690,216 L709,225 L697,234 L696,249 L695,237 L685,238 L686,235 L686,234 L678,240 L675,274 L686,277 L679,279 L683,284 L686,281 L692,285 L700,273 L700,261 L701,277 L696,289 L710,303 L708,312 L713,320 L699,334 L700,339 L683,347 L687,364 L665,367 L657,378 L650,379 L652,399 L648,405 L651,411 L647,411 L650,417 L646,421 L654,431 L644,430 L647,444 L624,447 L609,432 L596,443 L572,433 L545,444 L526,442 L476,418 L464,418 L455,423 L443,418 L428,425 L407,417 L395,426 L380,420 L377,427 L387,446 L369,454 L356,443 L367,428 L364,414 L342,413 L339,417 L328,412 L316,418 L293,411 L293,418 L285,415 L276,423 L269,413 L258,416 L219,386 L186,368 L178,368 L173,359 L158,355 L139,341 L105,291 L97,249 L89,237 L87,198 L102,168 L91,150 L104,154 L112,137 L110,130 L120,123 L119,117 L128,117 L175,87 L258,70 L289,67 L308,73 L312,66Z";
+document.getElementById('island').setAttribute('d',ISLAND);
+const POLY=ISLAND.replace(/[MLZ]/g,' ').trim().split(/\s+/).map(p=>p.split(',').map(Number));
+const CX=398, CY=254;
+// zones: face = outward coast bearing (deg from N); marker x,y
+const ZONES=[
+ {id:"S",face:"Sul",name:"Angra · São Mateus",spots:"Angra · São Mateus · Monte Brasil",b:195,x:357,y:406},
+ {id:"SW",face:"Sudoeste",name:"Negrito · Cinco Ribeiras",spots:"Negrito · Cinco Ribeiras",b:230,x:230,y:385},
+ {id:"W",face:"Oeste",name:"Doze Ribeiras · Serreta",spots:"Doze Ribeiras · Serreta · P. Queimado",b:283,x:101,y:185},
+ {id:"NW",face:"Noroeste",name:"Altares · Biscoitos",spots:"Altares · Biscoitos",b:322,x:260,y:77},
+ {id:"N",face:"Norte/Nordeste",name:"Quatro Ribeiras",spots:"Quatro Ribeiras · Ponta do Coelho",b:40,x:510,y:111},
+ {id:"E",face:"Leste",name:"Praia da Vitória",spots:"Praia da Vitória · S. Sebastião · P. Martins",b:94,x:668,y:272},
+ {id:"SE",face:"Sudeste",name:"Porto Judeu · Contendas",spots:"Porto Judeu · Salga · Contendas",b:150,x:498,y:427},
+];
+const SWMODELS=[
+ {key:"MFWAM",id:"meteofrance_wave"},
+ {key:"ECMWF",id:"ecmwf_wam025"},
+ {key:"GFS",id:"ncep_gfswave025"},
+];
+let LOADED="";
+const DSHORT=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const cosd=d=>Math.cos(d*Math.PI/180), sind=d=>Math.sin(d*Math.PI/180);
+const RAMP=[[0,[226,75,74]],[.5,[239,159,39]],[.78,[151,196,89]],[1,[47,227,160]]];
+function heat(t){t=Math.max(0,Math.min(1,t));let a=RAMP[0],b=RAMP[RAMP.length-1];for(let i=0;i<RAMP.length-1;i++){if(t>=RAMP[i][0]&&t<=RAMP[i+1][0]){a=RAMP[i];b=RAMP[i+1];break}}const f=(t-a[0])/((b[0]-a[0])||1),c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));return`rgb(${c[0]},${c[1]},${c[2]})`}
+function pip(x,y){let c=false,n=POLY.length,j=n-1;for(let i=0;i<n;i++){const[xi,yi]=POLY[i],[xj,yj]=POLY[j];if(((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/((yj-yi)||1e-9)+xi))c=!c;j=i}return c}
+function intercept(bear){const ux=sind(bear),uy=-cosd(bear);let lx=CX,ly=CY;for(let i=1;i<500;i++){const x=CX+ux*i*1.5,y=CY+uy*i*1.5;if(!pip(x,y))break;lx=x;ly=y}return[lx,ly,ux,uy]}
+
+// scoring: one model -> 0..3
+function scoreOne(zone,m){
+  const H=(m.swellH!=null?m.swellH:(m.waveH!=null?m.waveH:0));
+  const dir=(m.swellDir!=null?m.swellDir:(m.waveDir!=null?m.waveDir:null));
+  const exp=dir==null?0.4:Math.max(0,cosd(dir-zone.b));    // swell hitting this coast
+  const swellPen=1.8*exp*H;
+  const offsh=(m.windDir!=null)?cosd(m.windDir-zone.b):0;   // +1 offshore, -1 onshore
+  const windPen=1.6*((m.windSpd||0)/30)*(0.5-0.5*offsh);
+  const chop=Math.max(0,((m.windSpd||0)-28))/22;
+  return Math.max(0,Math.min(3,3-swellPen-windPen-chop));
+}
+function sdir(m){return m.swellDir!=null?m.swellDir:m.waveDir}
+const GOOD=2, BASE=3*28;
+function weekRaw(arr){let r=0,run=0;for(const s of arr){if(s>=GOOD){run++;r+=s*run}else run=0}return r}
+function runs(arr){const o=[];let st=-1;for(let i=0;i<=arr.length;i++){const g=i<arr.length&&arr[i]>=GOOD;if(g&&st<0)st=i;if(!g&&st>=0){o.push([st,i-1]);st=-1}}return o}
+function bestRun(arr){let b=[0,-1];for(const r of runs(arr))if(r[1]-r[0]>b[1]-b[0])b=r;return b}
+
+let DATA=null, DAYS=[], mode="week", sel="N";
+
+async function load(){
+  document.getElementById('status').innerHTML=`<span class="spin"></span>A perguntar aos modelos (${SWMODELS.map(m=>m.key).join(" · ")})…`;
+  const base=`https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&daily=swell_wave_height_max,swell_wave_direction_dominant,swell_wave_period_max,wave_height_max,wave_direction_dominant&timezone=auto&forecast_days=7&cell_selection=sea`;
+  const windu=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto&forecast_days=7&wind_speed_unit=kmh&cell_selection=sea`;
+  const res=await Promise.all(SWMODELS.map(m=>
+    fetch(base+"&models="+m.id).then(r=>r.json()).then(j=>({m,j})).catch(e=>({m,j:{error:true,reason:String((e&&e.message)||e)}}))
+  ));
+  const wj=await fetch(windu).then(r=>r.json()).catch(()=>({}));
+  const ok=res.filter(r=>r.j&&r.j.daily&&r.j.daily.time&&r.j.daily.time.length);
+  if(!ok.length){const bad=res.find(r=>r.j&&r.j.reason);throw new Error(bad&&bad.j.reason?bad.j.reason:"a API não devolveu dados de ondulação");}
+  LOADED=ok.map(r=>r.m.key).join(" · ");
+  DAYS=ok[0].j.daily.time.map(t=>{const d=new Date(t+"T00:00");return{iso:t,dow:d.getDay(),lbl:DSHORT[d.getDay()]+" "+d.getDate()}});
+  const wd=(wj&&wj.daily)?wj.daily:null;
+  DATA=DAYS.map((_,i)=>ok.map(r=>{const D=r.j.daily;return{
+    prov:r.m.key,
+    swellH:D.swell_wave_height_max?D.swell_wave_height_max[i]:null,
+    swellDir:D.swell_wave_direction_dominant?D.swell_wave_direction_dominant[i]:null,
+    swellT:D.swell_wave_period_max?D.swell_wave_period_max[i]:null,
+    waveH:D.wave_height_max?D.wave_height_max[i]:null,
+    waveDir:D.wave_direction_dominant?D.wave_direction_dominant[i]:null,
+    windSpd:wd&&wd.wind_speed_10m_max?wd.wind_speed_10m_max[i]:null,
+    windDir:wd&&wd.wind_direction_10m_dominant?wd.wind_direction_10m_dominant[i]:null,
+  };}));
+  ZONES.forEach(z=>{
+    z.day=DATA.map(models=>{
+      const sc=models.filter(m=>m.swellH!=null||m.waveH!=null).map(m=>scoreOne(z,m));
+      if(!sc.length)return{mean:0,spread:3,round:0};
+      const mean=sc.reduce((a,b)=>a+b,0)/sc.length, spread=Math.max(...sc)-Math.min(...sc);
+      return{mean,spread,round:Math.round(mean)};
+    });
+    z.rounds=z.day.map(d=>d.round);
+    z.week=Math.round(weekRaw(z.rounds)/BASE*100);
+    z.avgSpread=z.day.reduce((a,b)=>a+b.spread,0)/z.day.length;
+  });
+  const windTxt=wd?"":" · vento indisponível";
+  document.getElementById('status').innerHTML=`<b>Ao vivo.</b> ${DAYS[0].iso} → ${DAYS[DAYS.length-1].iso} · ${ok.length} modelo(s) a votar: ${LOADED}${windTxt} · ${new Date().toLocaleString('pt-PT')}`;
+  buildSeg(); setMode("week"); select("N");
+}
+
+function confTier(spread){return spread<0.6?["alta","#2fe3a0","●"]:spread<1.3?["média","#e0b243","◐"]:["baixa","#c2453a","○"]}
+
+function buildSeg(){
+  const seg=document.getElementById('seg');
+  seg.innerHTML=`<button class="btn week" data-m="week" aria-pressed="true">Score 7 dias</button>`+
+    DAYS.map((d,i)=>`<button class="btn" data-m="${i}" aria-pressed="false">${d.lbl}</button>`).join("")+
+    `<button class="btn refresh" onclick="load()">↻ atualizar</button>`;
+  seg.querySelectorAll('.btn[data-m]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.m)));
+}
+
+const gm=document.getElementById('markers');
+function buildMarkers(){
+  gm.innerHTML="";
+  ZONES.forEach(z=>{
+    const ly=z.y>CY?z.y-22:z.y+28;
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","mk");g.setAttribute("tabindex","0");g.setAttribute("role","button");g.setAttribute("aria-label",z.face);
+    g.innerHTML=`<circle class="mk-ring" cx="${z.x}" cy="${z.y}" r="22"></circle>
+      <circle class="mk-conf" cx="${z.x}" cy="${z.y}" r="19"></circle>
+      <circle class="mk-dot" cx="${z.x}" cy="${z.y}" r="15"></circle>
+      <text class="mk-num" x="${z.x}" y="${z.y}"></text>
+      <text class="mk-tag" x="${z.x}" y="${ly}">${z.face}</text>`;
+    g.addEventListener("click",()=>select(z.id));
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(z.id)}});
+    gm.appendChild(g);z.g=g;
+  });
+}
+function metric(z){return mode==="week"?z.week/100:z.day[+mode].mean/3}
+function valTxt(z){return mode==="week"?z.week:z.day[+mode].mean.toFixed(1)}
+function spreadOf(z){return mode==="week"?z.avgSpread:z.day[+mode].spread}
+function drawMarkers(){
+  ZONES.forEach(z=>{
+    const t=metric(z),col=heat(t),[,c2,]=confTier(spreadOf(z));
+    const dot=z.g.querySelector(".mk-dot");
+    dot.setAttribute("fill",col);
+    dot.setAttribute("r",(mode==="week"?11+t*8:12+t*6).toFixed(1));
+    dot.setAttribute("opacity", spreadOf(z)>=1.3?0.55:1);
+    const cf=z.g.querySelector(".mk-conf");
+    cf.setAttribute("stroke", spreadOf(z)>=1.3?c2:"transparent");
+    z.g.querySelector(".mk-num").textContent=mode==="week"?z.week:z.day[+mode].round;
+    z.g.setAttribute("data-sel",z.id===sel?"1":"0");
+  });
+}
+function drawOverlay(){
+  const sw=document.getElementById('swell'),wd=document.getElementById('wind');
+  if(mode==="week"){sw.setAttribute("opacity","0");wd.setAttribute("opacity","0");sw.innerHTML="";wd.innerHTML="";return}
+  const i=+mode, models=DATA[i];
+  const dirs=models.map(m=>sdir(m)).filter(v=>v!=null);
+  if(!dirs.length){sw.setAttribute("opacity","0");wd.setAttribute("opacity","0");return}
+  const mean=dirs.reduce((a,b)=>a+b,0)/dirs.length;
+  const[x,y,ux,uy]=intercept(mean),px=-uy,py=ux;let h="";
+  [[14,38],[28,32],[42,26]].forEach((a,k)=>{const d=a[0],w=a[1],cx=x+ux*d,cy=y+uy*d,ox=cx-ux*10,oy=cy-uy*10;
+    h+=`<path d="M${(cx-px*w).toFixed(1)},${(cy-py*w).toFixed(1)} Q${ox.toFixed(1)},${oy.toFixed(1)} ${(cx+px*w).toFixed(1)},${(cy+py*w).toFixed(1)}" fill="none" stroke="currentColor" stroke-width="2.5" opacity="${.9-k*.22}"/>`});
+  h+=`<line x1="${(x+ux*54).toFixed(1)}" y1="${(y+uy*54).toFixed(1)}" x2="${(x+ux*8).toFixed(1)}" y2="${(y+uy*8).toFixed(1)}" stroke="currentColor" stroke-width="2" marker-end="url(#ar)" opacity=".8"/>`;
+  // model spread fan
+  const mn=Math.min(...dirs),mx=Math.max(...dirs);
+  if(mx-mn>8){[mn,mx].forEach(b=>{const[,, vx,vy]=intercept(b);h+=`<line x1="${(x)}" y1="${(y)}" x2="${(x+vx*40).toFixed(1)}" y2="${(y+vy*40).toFixed(1)}" stroke="currentColor" stroke-width="1" opacity=".4" stroke-dasharray="3 3"/>`})}
+  h+=`<text x="${(x+ux*66).toFixed(1)}" y="${(y+uy*66).toFixed(1)}" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="currentColor">swell</text>`;
+  sw.innerHTML=h;sw.setAttribute("opacity","1");
+  const wdirs=models.map(m=>m.windDir).filter(v=>v!=null);
+  if(wdirs.length){const wm=wdirs.reduce((a,b)=>a+b,0)/wdirs.length,twx=-sind(wm),twy=cosd(wm),ax=80,ay=450;
+    wd.innerHTML=`<circle cx="${ax}" cy="${ay}" r="17" fill="none" stroke="currentColor" stroke-width="1" opacity=".35"/><line x1="${(ax-twx*13).toFixed(1)}" y1="${(ay-twy*13).toFixed(1)}" x2="${(ax+twx*13).toFixed(1)}" y2="${(ay+twy*13).toFixed(1)}" stroke="currentColor" stroke-width="2.5" marker-end="url(#ar)"/><text x="${ax}" y="${ay+31}" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="currentColor">vento</text>`;
+    wd.setAttribute("opacity","1")}
+}
+function panel(){
+  const z=ZONES.find(x=>x.id===sel),p=document.getElementById('pan'),isW=mode==="week";
+  const sp=spreadOf(z),[ct,cc,cg]=confTier(sp);
+  const br=bestRun(z.rounds),has=br[1]>=br[0];
+  const win=has?`<b>${br[1]-br[0]+1} dia(s) seguidos</b> — ${DSHORT_lbl(br[0])}${br[1]>br[0]?"–"+DSHORT_lbl(br[1]):""}`:"nenhuma — fica em casa";
+  let cells="";const rs=runs(z.rounds);
+  z.day.forEach((dd,i)=>{const t=dd.round/3,low=dd.spread>=1.3;
+    cells+=`<div class="cell"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar ${low?'low':''}"><i style="height:${25+t*75}%;background:${heat(t)}"></i></div><span class="sv">${dd.round}</span></div>`});
+  let modelRows="";
+  if(!isW){const i=+mode;modelRows=DATA[i].map((m,k)=>`<div class="row"><span>${m.prov}</span><span>${m.swellH!=null?m.swellH.toFixed(1)+"m "+dir16(m.swellDir):(m.waveH!=null?m.waveH.toFixed(1)+"m":"—")} · vento ${m.windSpd!=null?Math.round(m.windSpd)+" "+dir16(m.windDir):"—"} · score ${scoreOne(z,m).toFixed(1)}</span></div>`).join("")}
+  p.innerHTML=`<div class="z-face">${z.face}</div><div class="z-name">${z.name}</div><div class="z-spots">${z.spots}</div>
+    <div class="read"><span class="r-num" style="color:${heat(metric(z))}">${valTxt(z)}</span><span class="r-unit">${isW?"/100 · 7 dias":"/3 · "+DAYS[+mode].lbl}</span>
+    <span class="conf-pill" style="background:${cc}22;color:${cc}">${cg} concordância ${ct}</span></div>
+    <div class="verd">${verdict(z)}</div>
+    <div class="lab">Consenso dia a dia (0–3) · tracejado = baixa concordância</div>
+    <div class="strip">${cells}</div>
+    <div class="lab" style="margin-top:12px">Melhor janela</div><div style="font-size:12.5px;color:var(--muted)">${win}</div>
+    ${modelRows?`<div class="lab" style="margin-top:12px">Modelos — ${DAYS[+mode].lbl}</div><div class="models">${modelRows}</div>`:""}`;
+}
+function DSHORT_lbl(i){return DAYS[i]?DAYS[i].lbl.split(" ")[0]:""}
+function dir16(d){if(d==null)return"";const s=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];return s[Math.round(((d%360)/22.5))%16]}
+function verdict(z){
+  const best=z.rounds.map((s,i)=>[s,i]).filter(a=>a[0]>=2).map(a=>DSHORT_lbl(a[1]));
+  if(z.week>=60)return `Vai! Das melhores da semana — abrigada quase sempre (${best.join(", ")||"poucos"}).`;
+  if(z.week>=30)return `Talvez. Só uns dias dão: ${best.length?best.join(", "):"poucos"}. Escolhe bem.`;
+  return `Não vais. Exposta ao que está a bater — nem penses, salvo ${best.join(", ")||"nenhum dia claro"}.`;
+}
+function ranklist(){
+  const el=document.getElementById('rl');
+  const arr=[...ZONES].sort((a,b)=>(mode==="week"?b.week-a.week:b.day[+mode].mean-a.day[+mode].mean));
+  const mx=mode==="week"?100:3;
+  el.innerHTML=arr.map((z,i)=>{const v=mode==="week"?z.week:z.day[+mode].mean,t=metric(z),[,cc,cg]=confTier(spreadOf(z));
+    return `<div class="rr" data-id="${z.id}"><span class="rk">${i+1}</span><span class="nm">${z.face}</span><span class="track"><span class="fill" style="width:${v/mx*100}%;background:${heat(t)}"></span></span><span class="sc">${mode==="week"?v:v.toFixed(1)}</span><span class="cf" style="color:${cc}">${cg}</span></div>`}).join("");
+  el.querySelectorAll('.rr').forEach(r=>r.addEventListener('click',()=>select(r.dataset.id)));
+  document.getElementById('rt').textContent=mode==="week"?"Classificação — consenso 7 dias":"Classificação — "+DAYS[+mode].lbl+" (0–3)";
+}
+function meta(){
+  const el=document.getElementById('meta');
+  if(mode==="week"){el.innerHTML="<b>A semana toda.</b> Marca esbatida = os modelos não se entendem nesse canto. Toca num dia para veres o swell de consenso e o que cada modelo acha.";return}
+  const i=+mode,models=DATA[i];
+  const sh=models.map(m=>m.swellH!=null?m.swellH:m.waveH).filter(v=>v!=null),sd=models.map(m=>sdir(m)).filter(v=>v!=null);
+  const hh=sh.length?(sh.reduce((a,b)=>a+b,0)/sh.length).toFixed(1):"—";
+  const dd=sd.length?dir16(sd.reduce((a,b)=>a+b,0)/sd.length):"—";
+  el.innerHTML=`<b>${DAYS[i].lbl}.</b> Consenso: ondulação ${dd} ~${hh} m · setas mostram o swell médio (leque = dispersão entre modelos).`;
+}
+function select(id){sel=id;drawMarkers();panel()}
+function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();panel();ranklist();meta()}
+
+buildMarkers();
+load().catch(e=>{
+  document.getElementById('status').innerHTML="";
+  document.querySelector('.stage').style.display="none";
+  document.querySelector('.rank').style.display="none";
+  const d=document.createElement('div');d.className='err';
+  d.innerHTML=`<b>Os modelos não atenderam.</b><br>Se estás a ver isto dentro do chat, o sandbox bloqueia chamadas externas (CSP). <b>Descarrega este ficheiro e abre-o no browser</b> (ou serve-o localmente) — aí o borasub liga-se à Open-Meteo e funciona.<br><br>Erro: <code>${(e&&e.message)||e}</code>`;
+  document.querySelector('.wrap').insertBefore(d,document.querySelector('.legend'));
+});
+</script>
+</body>
+</html>
