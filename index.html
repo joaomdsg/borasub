@@ -68,7 +68,9 @@
   .rr .nm{font-size:13px;width:150px}
   .rr .track{flex:1;height:8px;background:#0c2330;border-radius:5px;overflow:hidden}
   .rr .fill{display:block;height:100%;border-radius:5px}
-  .rr .sc{font-family:var(--mono);font-size:12px;width:52px;text-align:right}
+  .rr .sc{font-family:var(--mono);font-size:12px;width:96px;text-align:right}
+  .rr .sc b{color:var(--ink);font-weight:700}
+  .rr .sc .v{color:var(--muted)}
   .rr .cf{font-family:var(--mono);font-size:14px;width:20px;text-align:center}
   .foot{margin-top:20px;font-size:11.5px;line-height:1.55;color:var(--muted)}
   .foot b{color:var(--ink)}
@@ -78,6 +80,14 @@
   .err code{background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px}
   .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--aqua);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes sp{to{transform:rotate(360deg)}}
+  .reads{display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 2px}
+  .stat{min-width:104px}
+  .stat-lab{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+  .rank-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .rank-head h3{margin:0}
+  .rsort{display:flex;gap:4px}
+  .rsort button{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--sea-1);border:1px solid var(--line);border-radius:7px;padding:3px 9px;cursor:pointer}
+  .rsort button[aria-pressed="true"]{color:var(--sea-0);background:var(--aqua);border-color:transparent;font-weight:700}
 </style>
 </head>
 <body>
@@ -85,7 +95,7 @@
   <p class="eyebrow">Ilha Terceira · caça submarina</p>
   <h1>borasub</h1>
   <span class="tag">Vai ou não vai!?</span>
-  <p class="sub">3 modelos de ondulação a discutir onde é que a água está pescável — hoje e nos próximos 7 dias. Concordam → confia. Discordam → a marca fica esbatida e a decisão é tua.</p>
+  <p class="sub">3 modelos de ondulação a discutir onde a água está pescável — hoje e nos próximos 7 dias. Dois eixos por zona: <b>pescabilidade</b> (ondas + vento) e <b>visibilidade</b> (dias calmos seguidos = água limpa). Concordam → confia. Discordam → a marca fica esbatida e a decisão é tua.</p>
   <div class="status" id="status"><span class="spin"></span>A perguntar aos modelos se hoje vale a pena…</div>
 
   <div class="ctrl" id="seg"></div>
@@ -114,7 +124,10 @@
   </div>
 
   <div class="card rank">
-    <h3 id="rt">Classificação — consenso 7 dias</h3>
+    <div class="rank-head">
+      <h3 id="rt">Pescabilidade — 7 dias</h3>
+      <div class="rsort" id="rsort"><button data-s="pesca" aria-pressed="true">pescável</button><button data-s="viz" aria-pressed="false">visível</button></div>
+    </div>
     <div id="rl"></div>
   </div>
 
@@ -124,10 +137,12 @@
     <span><span class="sw" style="background:#97C459"></span>Bom</span>
     <span><span class="sw" style="background:#2fe3a0"></span>Ótimo</span>
     <span style="color:var(--faint)">● alta · ◐ média · ○ baixa concordância</span>
+    <span style="color:var(--faint)">P pescável · V visível (0–3)</span>
   </div>
 
   <div class="foot">
     <p><b>Como funciona.</b> Para cada dia, cada modelo dá 0–3 a cada zona a partir da ondulação (direção/altura vs. exposição da costa, por interseção geométrica com a ilha) e do vento (offshore/onshore + intensidade). O que vês é a <b>média dos modelos</b>; a confiança vem de quanto concordam entre si (concordam → alta). O score de 7 dias premeia dias bons seguidos. Verde = bora, vermelho = fica em casa.</p>
+    <p style="margin-top:8px"><b>Visibilidade (eixo à parte).</b> A pescabilidade diz se dá para entrar; a visibilidade diz se vais ver alguma coisa lá dentro. Um dia conta como <b>calmo</b> para uma zona quando o vento médio é &lt;12 km/h <b>e</b> a ondulação bate fraca nessa costa. A visibilidade cresce com os dias calmos seguidos até ao próprio dia (com 7 dias de histórico para trás), saturando ~4–5 dias — água parada assenta o sedimento. Dia agitado → visibilidade baixa, por muitos dias calmos que tenha havido antes.</p>
     <p style="margin-top:8px"><b>Fontes (Open-Meteo, ao vivo).</b> Ondulação: MFWAM (MétéoFrance/Copernicus, ~8 km), ECMWF-WAM (0,25°), GFS-Wave (NOAA, 0,25°). Vento: MétéoFrance, ECMWF-IFS, GFS. Nenhum modelo regional de alta resolução cobre os Açores, por isso o consenso + a boia da Praia da Vitória são o melhor caminho. Segurança: bóia, apneia, reservas e tamanhos mínimos; caça por fora da baía de Angra.</p>
   </div>
 </div>
@@ -173,17 +188,31 @@ function scoreOne(zone,m){
   return Math.max(0,Math.min(3,3-swellPen-windPen-chop));
 }
 function sdir(m){return m.swellDir!=null?m.swellDir:m.waveDir}
+// visibility: a day is "calm" for a zone when wind is light AND swell hits the coast weakly
+const CALM_WIND=12, CALM_SWELL=0.6;
+function calmZoneDay(z,models){
+  const w=models.map(m=>m.windMean!=null?m.windMean:m.windSpd).find(v=>v!=null); // typical (mean) wind, not gust peak
+  if(w==null||w>=CALM_WIND)return false;
+  const es=models.filter(m=>m.swellH!=null||m.waveH!=null).map(m=>{
+    const H=(m.swellH!=null?m.swellH:m.waveH),dir=sdir(m);
+    const exp=dir==null?0.4:Math.max(0,cosd(dir-z.b));
+    return exp*H;                                          // swell energy hitting this coast
+  });
+  if(!es.length)return false;
+  return es.reduce((a,b)=>a+b,0)/es.length < CALM_SWELL;
+}
+function vizScore(streak){return 3*(1-Math.pow(0.6,streak))} // 0..3, saturates ~4-5 calm days
 const GOOD=2, BASE=3*28;
 function weekRaw(arr){let r=0,run=0;for(const s of arr){if(s>=GOOD){run++;r+=s*run}else run=0}return r}
 function runs(arr){const o=[];let st=-1;for(let i=0;i<=arr.length;i++){const g=i<arr.length&&arr[i]>=GOOD;if(g&&st<0)st=i;if(!g&&st>=0){o.push([st,i-1]);st=-1}}return o}
 function bestRun(arr){let b=[0,-1];for(const r of runs(arr))if(r[1]-r[0]>b[1]-b[0])b=r;return b}
 
-let DATA=null, DAYS=[], mode="week", sel="N";
+let DATA=null, DAYS=[], mode="week", sel="N", rankBy="pesca";
 
 async function load(){
   document.getElementById('status').innerHTML=`<span class="spin"></span>A perguntar aos modelos (${SWMODELS.map(m=>m.key).join(" · ")})…`;
-  const base=`https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&daily=swell_wave_height_max,swell_wave_direction_dominant,swell_wave_period_max,wave_height_max,wave_direction_dominant&timezone=auto&forecast_days=7&cell_selection=sea`;
-  const windu=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto&forecast_days=7&wind_speed_unit=kmh&cell_selection=sea`;
+  const base=`https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&daily=swell_wave_height_max,swell_wave_direction_dominant,swell_wave_period_max,wave_height_max,wave_direction_dominant&timezone=auto&forecast_days=7&past_days=7&cell_selection=sea`;
+  const windu=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=wind_speed_10m_max,wind_speed_10m_mean,wind_direction_10m_dominant&timezone=auto&forecast_days=7&past_days=7&wind_speed_unit=kmh&cell_selection=sea`;
   const res=await Promise.all(SWMODELS.map(m=>
     fetch(base+"&models="+m.id).then(r=>r.json()).then(j=>({m,j})).catch(e=>({m,j:{error:true,reason:String((e&&e.message)||e)}}))
   ));
@@ -191,9 +220,10 @@ async function load(){
   const ok=res.filter(r=>r.j&&r.j.daily&&r.j.daily.time&&r.j.daily.time.length);
   if(!ok.length){const bad=res.find(r=>r.j&&r.j.reason);throw new Error(bad&&bad.j.reason?bad.j.reason:"a API não devolveu dados de ondulação");}
   LOADED=ok.map(r=>r.m.key).join(" · ");
-  DAYS=ok[0].j.daily.time.map(t=>{const d=new Date(t+"T00:00");return{iso:t,dow:d.getDay(),lbl:DSHORT[d.getDay()]+" "+d.getDate()}});
+  // full window includes up to 7 past days (for visibility lookback); display only the forecast tail
+  const ALLDAYS=ok[0].j.daily.time.map(t=>{const d=new Date(t+"T00:00");return{iso:t,dow:d.getDay(),lbl:DSHORT[d.getDay()]+" "+d.getDate()}});
   const wd=(wj&&wj.daily)?wj.daily:null;
-  DATA=DAYS.map((_,i)=>ok.map(r=>{const D=r.j.daily;return{
+  const ALLDATA=ALLDAYS.map((_,i)=>ok.map(r=>{const D=r.j.daily;return{
     prov:r.m.key,
     swellH:D.swell_wave_height_max?D.swell_wave_height_max[i]:null,
     swellDir:D.swell_wave_direction_dominant?D.swell_wave_direction_dominant[i]:null,
@@ -201,8 +231,12 @@ async function load(){
     waveH:D.wave_height_max?D.wave_height_max[i]:null,
     waveDir:D.wave_direction_dominant?D.wave_direction_dominant[i]:null,
     windSpd:wd&&wd.wind_speed_10m_max?wd.wind_speed_10m_max[i]:null,
+    windMean:wd&&wd.wind_speed_10m_mean?wd.wind_speed_10m_mean[i]:null,
     windDir:wd&&wd.wind_direction_10m_dominant?wd.wind_direction_10m_dominant[i]:null,
   };}));
+  const START=Math.max(0,ALLDAYS.length-7);
+  DAYS=ALLDAYS.slice(START);
+  DATA=ALLDATA.slice(START);
   ZONES.forEach(z=>{
     z.day=DATA.map(models=>{
       const sc=models.filter(m=>m.swellH!=null||m.waveH!=null).map(m=>scoreOne(z,m));
@@ -213,8 +247,12 @@ async function load(){
     z.rounds=z.day.map(d=>d.round);
     z.week=Math.round(weekRaw(z.rounds)/BASE*100);
     z.avgSpread=z.day.reduce((a,b)=>a+b.spread,0)/z.day.length;
+    const calm=ALLDATA.map(models=>calmZoneDay(z,models));   // per full-window day
+    z.streak=DAYS.map((_,j)=>{let s=0;for(let k=START+j;k>=0;k--){if(calm[k])s++;else break}return s});
+    z.viz=z.streak.map(vizScore);
+    z.vizWeek=z.viz.reduce((a,b)=>a+b,0)/z.viz.length;
   });
-  const windTxt=wd?"":" · vento indisponível";
+  const windTxt=wd?"":" · vento indisponível (visibilidade limitada)";
   document.getElementById('status').innerHTML=`<b>Ao vivo.</b> ${DAYS[0].iso} → ${DAYS[DAYS.length-1].iso} · ${ok.length} modelo(s) a votar: ${LOADED}${windTxt} · ${new Date().toLocaleString('pt-PT')}`;
   buildSeg(); setMode("week"); select("N");
 }
@@ -288,36 +326,50 @@ function panel(){
   const sp=spreadOf(z),[ct,cc,cg]=confTier(sp);
   const br=bestRun(z.rounds),has=br[1]>=br[0];
   const win=has?`<b>${br[1]-br[0]+1} dia(s) seguidos</b> — ${DSHORT_lbl(br[0])}${br[1]>br[0]?"–"+DSHORT_lbl(br[1]):""}`:"nenhuma — fica em casa";
-  let cells="";const rs=runs(z.rounds);
+  let cells="";
   z.day.forEach((dd,i)=>{const t=dd.round/3,low=dd.spread>=1.3;
     cells+=`<div class="cell"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar ${low?'low':''}"><i style="height:${25+t*75}%;background:${heat(t)}"></i></div><span class="sv">${dd.round}</span></div>`});
+  let vcells="";
+  z.viz.forEach((v,i)=>{const t=v/3;
+    vcells+=`<div class="cell"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar"><i style="height:${10+t*90}%;background:${heat(t)}"></i></div><span class="sv">${v.toFixed(1)}</span></div>`});
+  const vv=vizVal(z),vt=vv/3,vlab=isW?"média 7 dias":`${z.streak[+mode]} dia(s) calmo(s) seguidos`;
   let modelRows="";
   if(!isW){const i=+mode;modelRows=DATA[i].map((m,k)=>`<div class="row"><span>${m.prov}</span><span>${m.swellH!=null?m.swellH.toFixed(1)+"m "+dir16(m.swellDir):(m.waveH!=null?m.waveH.toFixed(1)+"m":"—")} · vento ${m.windSpd!=null?Math.round(m.windSpd)+" "+dir16(m.windDir):"—"} · score ${scoreOne(z,m).toFixed(1)}</span></div>`).join("")}
   p.innerHTML=`<div class="z-face">${z.face}</div><div class="z-name">${z.name}</div><div class="z-spots">${z.spots}</div>
-    <div class="read"><span class="r-num" style="color:${heat(metric(z))}">${valTxt(z)}</span><span class="r-unit">${isW?"/100 · 7 dias":"/3 · "+DAYS[+mode].lbl}</span>
-    <span class="conf-pill" style="background:${cc}22;color:${cc}">${cg} concordância ${ct}</span></div>
+    <div class="reads">
+      <div class="stat"><div class="read"><span class="r-num" style="color:${heat(metric(z))}">${valTxt(z)}</span><span class="r-unit">${isW?"/100":"/3"}</span></div><div class="stat-lab">pescabilidade · <span style="color:${cc}">${cg} ${ct}</span></div></div>
+      <div class="stat"><div class="read"><span class="r-num" style="color:${heat(vt)}">${vv.toFixed(1)}</span><span class="r-unit">/3</span></div><div class="stat-lab">visibilidade · ${vlab}</div></div>
+    </div>
     <div class="verd">${verdict(z)}</div>
-    <div class="lab">Consenso dia a dia (0–3) · tracejado = baixa concordância</div>
+    <div class="lab">Pescabilidade dia a dia (0–3) · tracejado = baixa concordância</div>
     <div class="strip">${cells}</div>
-    <div class="lab" style="margin-top:12px">Melhor janela</div><div style="font-size:12.5px;color:var(--muted)">${win}</div>
+    <div class="lab" style="margin-top:12px">Visibilidade dia a dia (0–3) · dias calmos acumulados</div>
+    <div class="strip">${vcells}</div>
+    <div class="lab" style="margin-top:12px">Melhor janela (pesca)</div><div style="font-size:12.5px;color:var(--muted)">${win}</div>
     ${modelRows?`<div class="lab" style="margin-top:12px">Modelos — ${DAYS[+mode].lbl}</div><div class="models">${modelRows}</div>`:""}`;
 }
+function vizVal(z){return mode==="week"?z.vizWeek:z.viz[+mode]}
 function DSHORT_lbl(i){return DAYS[i]?DAYS[i].lbl.split(" ")[0]:""}
 function dir16(d){if(d==null)return"";const s=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];return s[Math.round(((d%360)/22.5))%16]}
 function verdict(z){
   const best=z.rounds.map((s,i)=>[s,i]).filter(a=>a[0]>=2).map(a=>DSHORT_lbl(a[1]));
-  if(z.week>=60)return `Vai! Das melhores da semana — abrigada quase sempre (${best.join(", ")||"poucos"}).`;
-  if(z.week>=30)return `Talvez. Só uns dias dão: ${best.length?best.join(", "):"poucos"}. Escolhe bem.`;
-  return `Não vais. Exposta ao que está a bater — nem penses, salvo ${best.join(", ")||"nenhum dia claro"}.`;
+  const clear=z.vizWeek>=2?"e a água deve estar limpa":z.vizWeek>=1?"mas a visibilidade anda só média":"e a água deve estar turva (poucos dias calmos)";
+  if(z.week>=60)return `Vai! Das melhores da semana — abrigada quase sempre (${best.join(", ")||"poucos"}) ${clear}.`;
+  if(z.week>=30)return `Talvez. Só uns dias dão: ${best.length?best.join(", "):"poucos"} — ${clear}. Escolhe bem.`;
+  return `Não vais. Exposta ao que está a bater ${clear}. Nem penses, salvo ${best.join(", ")||"nenhum dia claro"}.`;
 }
 function ranklist(){
-  const el=document.getElementById('rl');
-  const arr=[...ZONES].sort((a,b)=>(mode==="week"?b.week-a.week:b.day[+mode].mean-a.day[+mode].mean));
-  const mx=mode==="week"?100:3;
-  el.innerHTML=arr.map((z,i)=>{const v=mode==="week"?z.week:z.day[+mode].mean,t=metric(z),[,cc,cg]=confTier(spreadOf(z));
-    return `<div class="rr" data-id="${z.id}"><span class="rk">${i+1}</span><span class="nm">${z.face}</span><span class="track"><span class="fill" style="width:${v/mx*100}%;background:${heat(t)}"></span></span><span class="sc">${mode==="week"?v:v.toFixed(1)}</span><span class="cf" style="color:${cc}">${cg}</span></div>`}).join("");
+  if(!DATA)return;
+  const el=document.getElementById('rl'),byViz=rankBy==="viz";
+  const pv=z=>mode==="week"?z.week:z.day[+mode].mean, vv=z=>mode==="week"?z.vizWeek:z.viz[+mode];
+  const val=byViz?vv:pv, mx=byViz?3:(mode==="week"?100:3);
+  const arr=[...ZONES].sort((a,b)=>val(b)-val(a));
+  el.innerHTML=arr.map((z,i)=>{const t=val(z)/mx,[,cc,cg]=confTier(spreadOf(z));
+    const p=mode==="week"?z.week:pv(z).toFixed(1);
+    return `<div class="rr" data-id="${z.id}"><span class="rk">${i+1}</span><span class="nm">${z.face}</span><span class="track"><span class="fill" style="width:${t*100}%;background:${heat(t)}"></span></span><span class="sc"><b>P${p}</b> <span class="v">V${vv(z).toFixed(1)}</span></span><span class="cf" style="color:${cc}">${cg}</span></div>`}).join("");
   el.querySelectorAll('.rr').forEach(r=>r.addEventListener('click',()=>select(r.dataset.id)));
-  document.getElementById('rt').textContent=mode==="week"?"Classificação — consenso 7 dias":"Classificação — "+DAYS[+mode].lbl+" (0–3)";
+  document.getElementById('rt').textContent=(byViz?"Visibilidade":"Pescabilidade")+(mode==="week"?" — 7 dias":" — "+DAYS[+mode].lbl);
+  document.querySelectorAll('#rsort button').forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===rankBy?"true":"false"));
 }
 function meta(){
   const el=document.getElementById('meta');
@@ -332,6 +384,7 @@ function select(id){sel=id;drawMarkers();panel()}
 function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();panel();ranklist();meta()}
 
 buildMarkers();
+document.querySelectorAll('#rsort button').forEach(b=>b.addEventListener('click',()=>{rankBy=b.dataset.s;ranklist()}));
 load().catch(e=>{
   document.getElementById('status').innerHTML="";
   document.querySelector('.stage').style.display="none";
