@@ -62,15 +62,16 @@
   .models .row span:last-child{color:var(--ink)}
   .rank{margin-top:16px;padding:12px 15px}
   .rank h3{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 8px;font-weight:600}
-  .rr{display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer;border-radius:8px}
+  .rr{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;border-radius:8px}
   .rr:hover{background:var(--sea-1)}
   .rr .rk{font-family:var(--mono);font-size:11px;color:var(--faint);width:16px}
   .rr .nm{font-size:13px;width:150px}
   .rr .track{flex:1;height:8px;background:#0c2330;border-radius:5px;overflow:hidden}
   .rr .fill{display:block;height:100%;border-radius:5px}
-  .rr .sc{font-family:var(--mono);font-size:12px;width:96px;text-align:right}
-  .rr .sc b{color:var(--ink);font-weight:700}
-  .rr .sc .v{color:var(--muted)}
+  .rr .bars{flex:1;display:flex;flex-direction:column;gap:4px}
+  .rr .brow{display:flex;align-items:center;gap:8px}
+  .rr .brow .bk{font-family:var(--mono);font-size:10px;color:var(--faint);width:10px}
+  .rr .brow .bv{font-family:var(--mono);font-size:11px;width:34px;text-align:right;color:var(--ink)}
   .rr .cf{font-family:var(--mono);font-size:14px;width:20px;text-align:center}
   .foot{margin-top:20px;font-size:11.5px;line-height:1.55;color:var(--muted)}
   .foot b{color:var(--ink)}
@@ -125,8 +126,8 @@
 
   <div class="card rank">
     <div class="rank-head">
-      <h3 id="rt">Pescabilidade — 7 dias</h3>
-      <div class="rsort" id="rsort"><button data-s="pesca" aria-pressed="true">pescável</button><button data-s="viz" aria-pressed="false">visível</button></div>
+      <h3 id="rt">Classificação — 7 dias</h3>
+      <span style="font-family:var(--mono);font-size:10.5px;color:var(--faint)">P pescável · V visível</span>
     </div>
     <div id="rl"></div>
   </div>
@@ -207,7 +208,7 @@ function weekRaw(arr){let r=0,run=0;for(const s of arr){if(s>=GOOD){run++;r+=s*r
 function runs(arr){const o=[];let st=-1;for(let i=0;i<=arr.length;i++){const g=i<arr.length&&arr[i]>=GOOD;if(g&&st<0)st=i;if(!g&&st>=0){o.push([st,i-1]);st=-1}}return o}
 function bestRun(arr){let b=[0,-1];for(const r of runs(arr))if(r[1]-r[0]>b[1]-b[0])b=r;return b}
 
-let DATA=null, DAYS=[], mode="week", sel="", rankBy="pesca";
+let DATA=null, DAYS=[], mode="week", sel="";
 
 async function load(){
   document.getElementById('status').innerHTML=`<span class="spin"></span>A perguntar aos modelos (${SWMODELS.map(m=>m.key).join(" · ")})…`;
@@ -361,16 +362,18 @@ function verdict(z){
 }
 function ranklist(){
   if(!DATA)return;
-  const el=document.getElementById('rl'),byViz=rankBy==="viz";
+  const el=document.getElementById('rl');
   const pv=z=>mode==="week"?z.week:z.day[+mode].mean, vv=z=>mode==="week"?z.vizWeek:z.viz[+mode];
-  const val=byViz?vv:pv, mx=byViz?3:(mode==="week"?100:3);
-  const arr=[...ZONES].sort((a,b)=>val(b)-val(a));
-  el.innerHTML=arr.map((z,i)=>{const t=val(z)/mx,[,cc,cg]=confTier(spreadOf(z));
+  const pmx=mode==="week"?100:3;
+  const arr=[...ZONES].sort((a,b)=>pv(b)-pv(a));
+  el.innerHTML=arr.map((z,i)=>{const pt=pv(z)/pmx,vt=vv(z)/3,[,cc,cg]=confTier(spreadOf(z));
     const p=mode==="week"?z.week:pv(z).toFixed(1);
-    return `<div class="rr" data-id="${z.id}"><span class="rk">${i+1}</span><span class="nm">${z.face}</span><span class="track"><span class="fill" style="width:${t*100}%;background:${heat(t)}"></span></span><span class="sc"><b>P${p}</b> <span class="v">V${vv(z).toFixed(1)}</span></span><span class="cf" style="color:${cc}">${cg}</span></div>`}).join("");
+    return `<div class="rr" data-id="${z.id}"><span class="rk">${i+1}</span><span class="nm">${z.face}</span><div class="bars">`+
+      `<div class="brow"><span class="bk">P</span><span class="track"><span class="fill" style="width:${pt*100}%;background:${heat(pt)}"></span></span><span class="bv">${p}</span></div>`+
+      `<div class="brow"><span class="bk">V</span><span class="track"><span class="fill" style="width:${vt*100}%;background:${heat(vt)}"></span></span><span class="bv">${vv(z).toFixed(1)}</span></div>`+
+      `</div><span class="cf" style="color:${cc}">${cg}</span></div>`}).join("");
   el.querySelectorAll('.rr').forEach(r=>r.addEventListener('click',()=>select(r.dataset.id)));
-  document.getElementById('rt').textContent=(byViz?"Visibilidade":"Pescabilidade")+(mode==="week"?" — 7 dias":" — "+DAYS[+mode].lbl);
-  document.querySelectorAll('#rsort button').forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===rankBy?"true":"false"));
+  document.getElementById('rt').textContent="Classificação"+(mode==="week"?" — 7 dias":" — "+DAYS[+mode].lbl);
 }
 function meta(){
   const el=document.getElementById('meta');
@@ -385,7 +388,6 @@ function select(id){sel=id;drawMarkers();panel()}
 function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();panel();ranklist();meta()}
 
 buildMarkers();
-document.querySelectorAll('#rsort button').forEach(b=>b.addEventListener('click',()=>{rankBy=b.dataset.s;ranklist()}));
 load().catch(e=>{
   document.getElementById('status').innerHTML="";
   document.querySelector('.stage').style.display="none";
