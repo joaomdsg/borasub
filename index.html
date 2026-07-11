@@ -404,26 +404,28 @@ function drawScatter(){
   h+=`<text class="sc-axlab" x="${(L-34)}" y="${T+4}" transform="rotate(-90 ${L-34} ${T+4})" text-anchor="end">pescabilidade →</text>`;
   h+=`<text class="sc-quad" x="${W-R-5}" y="${T+13}" text-anchor="end">bora</text>`;
   h+=`<text class="sc-quad" x="${L+5}" y="${y0-5}">fica</text>`;
-  // point positions, plus label positions with vertical anti-collision
+  // labels: 2D box declutter — each label box separates from other labels AND off every dot
+  const HH=7, DOTR=11;
   const pts=ZONES.map(z=>{const px=X(vizVal(z)/3),py=Y(metric(z));
     return{z,px,py,col:heat(metric(z)),low:spreadOf(z)>=1.3,cc:confTier(spreadOf(z))[1],
-      hw:Math.max(13,z.face.length*3.1),lx:px,ly:py-13}});
-  const clampY=v=>Math.min(y0-4,Math.max(T+10,v)), clampX=(v,hw)=>Math.min(W-R-hw,Math.max(L+hw,v));
-  pts.forEach(p=>{p.lx=clampX(p.lx,p.hw);p.ly=clampY(p.ly)});
-  for(let it=0;it<80;it++){let moved=false;
+      hw:Math.max(13,z.face.length*3.05),cx:px,cy:py-15}});
+  const clamp=p=>{p.cx=Math.min(W-R-p.hw,Math.max(L+p.hw,p.cx));p.cy=Math.min(y0-6,Math.max(T+8,p.cy))};
+  pts.forEach(clamp);
+  for(let it=0;it<220;it++){let moved=false;
     for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const a=pts[i],b=pts[j];
-      if(Math.abs(a.lx-b.lx)<a.hw+b.hw+3 && Math.abs(a.ly-b.ly)<13){
-        const push=(13-Math.abs(a.ly-b.ly))/2+.4;
-        if(a.ly<=b.ly){a.ly-=push;b.ly+=push}else{a.ly+=push;b.ly-=push}moved=true}}
-    pts.forEach(p=>{p.ly=clampY(p.ly)});
+      const dx=b.cx-a.cx,dy=b.cy-a.cy,ox=a.hw+b.hw+2-Math.abs(dx),oy=2*HH+2-Math.abs(dy);
+      if(ox>0&&oy>0){if(ox<=oy){const s=((dx<0?-1:1)*ox)/2;a.cx-=s;b.cx+=s}else{const s=((dy<0?-1:1)*oy)/2;a.cy-=s;b.cy+=s}moved=true}}
+    for(const a of pts)for(const p of pts){const dx=a.cx-p.px,dy=a.cy-p.py,ox=a.hw+DOTR-Math.abs(dx),oy=HH+DOTR-Math.abs(dy);
+      if(ox>0&&oy>0){if(ox<=oy)a.cx+=(dx<0?-1:1)*ox;else a.cy+=(dy<0?-1:1)*oy;moved=true}}
+    pts.forEach(clamp);
     if(!moved)break}
-  pts.forEach(p=>{const {z,px,py,col,low,cc,lx,ly}=p, lead=Math.abs(ly+3-py)>13;
+  pts.forEach(p=>{const {z,px,py,col,low,cc,cx,cy}=p, lead=Math.hypot(cx-px,cy-py)>22;
     h+=`<g class="sc-mk" data-id="${z.id}" style="cursor:pointer">`+
-       (lead?`<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(ly+3).toFixed(1)}" stroke="var(--faint)" stroke-width="1" opacity=".5"/>`:``)+
+       (lead?`<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="var(--faint)" stroke-width="1" opacity=".45"/>`:``)+
        `<circle class="sc-ring" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="14" style="opacity:${z.id===sel?1:0}"/>`+
        `<circle class="sc-conf" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="12" stroke="${low?cc:'transparent'}"/>`+
        `<circle class="sc-dot" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="8" fill="${col}" opacity="${low?.55:1}"/>`+
-       `<text class="sc-lab" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle">${z.face}</text></g>`});
+       `<text class="sc-lab" x="${cx.toFixed(1)}" y="${(cy+3).toFixed(1)}" text-anchor="middle">${z.face}</text></g>`});
   svg.innerHTML=h;
   svg.querySelectorAll('.sc-mk').forEach(g=>g.addEventListener('click',()=>select(g.dataset.id)));
 }
