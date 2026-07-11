@@ -89,6 +89,26 @@
   .rsort{display:flex;gap:4px}
   .rsort button{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--sea-1);border:1px solid var(--line);border-radius:7px;padding:3px 9px;cursor:pointer}
   .rsort button[aria-pressed="true"]{color:var(--sea-0);background:var(--aqua);border-color:transparent;font-weight:700}
+  /* balanced layout */
+  .stage{grid-template-columns:1fr 1fr;align-items:stretch}
+  .stage>.card{display:flex;flex-direction:column;justify-content:center}
+  .plot-cap{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:13px 16px 2px}
+  .detail{margin-top:16px;padding:16px 18px}
+  .pan-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+  .pan-id{min-width:190px}
+  .pan-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-top:4px}
+  @media(max-width:640px){.pan-cols{grid-template-columns:1fr}}
+  .col-lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+  .sc-dot{stroke:#04141c;stroke-width:2;cursor:pointer;transition:r .2s,opacity .2s}
+  .sc-ring{fill:none;stroke:var(--ink);stroke-width:2;opacity:0}
+  .sc-conf{fill:none;stroke-width:2;stroke-dasharray:3 3}
+  .sc-lab{font-family:var(--mono);font-size:10.5px;fill:var(--muted);pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3px}
+  .sc-grid{stroke:var(--line);stroke-width:1;opacity:.5}
+  .sc-axlab{font-family:var(--mono);font-size:10px;fill:var(--faint)}
+  .sc-quad{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;fill:var(--faint);opacity:.7}
+  .foot-credit{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:18px;padding-top:13px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .foot-credit a{color:var(--aqua);text-decoration:none}
+  .foot-credit a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -121,16 +141,13 @@
         <g id="markers"></g>
       </svg>
     </div>
-    <div class="card"><div class="pan" id="pan"></div></div>
+    <div class="card">
+      <div class="plot-cap">Pescabilidade × visibilidade — <span style="color:var(--aqua)">canto superior-direito = bora</span></div>
+      <svg id="scatter" viewBox="0 0 420 400" role="img" aria-label="Zonas por pescabilidade e visibilidade"></svg>
+    </div>
   </div>
 
-  <div class="card rank">
-    <div class="rank-head">
-      <h3 id="rt">Classificação — 7 dias</h3>
-      <span style="font-family:var(--mono);font-size:10.5px;color:var(--faint)">P pescável · V visível</span>
-    </div>
-    <div id="rl"></div>
-  </div>
+  <div class="card detail"><div class="pan" id="pan"></div></div>
 
   <div class="legend">
     <span><span class="sw" style="background:#E24B4A"></span>Mau</span>
@@ -138,13 +155,17 @@
     <span><span class="sw" style="background:#97C459"></span>Bom</span>
     <span><span class="sw" style="background:#2fe3a0"></span>Ótimo</span>
     <span style="color:var(--faint)">● alta · ◐ média · ○ baixa concordância</span>
-    <span style="color:var(--faint)">P pescável · V visível (0–3)</span>
   </div>
 
   <div class="foot">
     <p><b>Como funciona.</b> Para cada dia, cada modelo dá 0–3 a cada zona a partir da ondulação (direção/altura vs. exposição da costa, por interseção geométrica com a ilha) e do vento (offshore/onshore + intensidade). O que vês é a <b>média dos modelos</b>; a confiança vem de quanto concordam entre si (concordam → alta). O score de 7 dias premeia dias bons seguidos. Verde = bora, vermelho = fica em casa.</p>
     <p style="margin-top:8px"><b>Visibilidade (eixo à parte).</b> A pescabilidade diz se dá para entrar; a visibilidade diz se vais ver alguma coisa lá dentro. Um dia conta como <b>calmo</b> para uma zona quando o vento médio é &lt;12 km/h <b>e</b> a ondulação bate fraca nessa costa. A visibilidade cresce com os dias calmos seguidos até ao próprio dia (com 7 dias de histórico para trás), saturando ~4–5 dias — água parada assenta o sedimento. Dia agitado → visibilidade baixa, por muitos dias calmos que tenha havido antes.</p>
-    <p style="margin-top:8px"><b>Fontes (Open-Meteo, ao vivo).</b> Ondulação: MFWAM (MétéoFrance/Copernicus, ~8 km), ECMWF-WAM (0,25°), GFS-Wave (NOAA, 0,25°). Vento: MétéoFrance, ECMWF-IFS, GFS. Nenhum modelo regional de alta resolução cobre os Açores, por isso o consenso + a boia da Praia da Vitória são o melhor caminho. Segurança: bóia, apneia, reservas e tamanhos mínimos; caça por fora da baía de Angra.</p>
+    <p style="margin-top:8px"><b>Fontes (Open-Meteo, ao vivo).</b> Ondulação: MFWAM (MétéoFrance/Copernicus, ~8 km), ECMWF-WAM (0,25°), GFS-Wave (NOAA, 0,25°). Vento: Open-Meteo best-match (médio + máximo diário). Nenhum modelo regional de alta resolução cobre os Açores, por isso o consenso + a boia da Praia da Vitória são o melhor caminho. Segurança: bóia, apneia, reservas e tamanhos mínimos; caça por fora da baía de Angra.</p>
+  </div>
+
+  <div class="foot-credit">
+    <span>borasub · caça sub na Terceira, ao vivo</span>
+    <span>por <a href="https://github.com/joaomdsg" target="_blank" rel="noopener">joaomdsg</a> · <a href="https://github.com/joaomdsg/borasub" target="_blank" rel="noopener">código no GitHub</a></span>
   </div>
 </div>
 
@@ -324,7 +345,7 @@ function drawOverlay(){
 }
 function panel(){
   const z=ZONES.find(x=>x.id===sel),p=document.getElementById('pan'),isW=mode==="week";
-  if(!z){p.innerHTML=`<div class="z-face">escolhe uma zona</div><div class="z-name" style="color:var(--muted);font-weight:500">Toca numa marca do mapa (ou na classificação) para veres pescabilidade, visibilidade e os 3 modelos.</div>`;return}
+  if(!z){p.innerHTML=`<div class="z-face">escolhe uma zona</div><div class="z-name" style="color:var(--muted);font-weight:500;max-width:60ch">Toca numa zona — no mapa à esquerda ou no gráfico pescabilidade × visibilidade à direita — para veres o detalhe e o que cada modelo prevê.</div>`;return}
   const sp=spreadOf(z),[ct,cc,cg]=confTier(sp);
   const br=bestRun(z.rounds),has=br[1]>=br[0];
   const win=has?`<b>${br[1]-br[0]+1} dia(s) seguidos</b> — ${DSHORT_lbl(br[0])}${br[1]>br[0]?"–"+DSHORT_lbl(br[1]):""}`:"nenhuma — fica em casa";
@@ -337,18 +358,27 @@ function panel(){
   const vv=vizVal(z),vt=vv/3,vlab=isW?"média 7 dias":`${z.streak[+mode]} dia(s) calmo(s) seguidos`;
   let modelRows="";
   if(!isW){const i=+mode;modelRows=DATA[i].map((m,k)=>`<div class="row"><span>${m.prov}</span><span>${m.swellH!=null?m.swellH.toFixed(1)+"m "+dir16(m.swellDir):(m.waveH!=null?m.waveH.toFixed(1)+"m":"—")} · vento ${m.windSpd!=null?Math.round(m.windSpd)+" "+dir16(m.windDir):"—"} · score ${scoreOne(z,m).toFixed(1)}</span></div>`).join("")}
-  p.innerHTML=`<div class="z-face">${z.face}</div><div class="z-name">${z.name}</div><div class="z-spots">${z.spots}</div>
-    <div class="reads">
-      <div class="stat"><div class="read"><span class="r-num" style="color:${heat(metric(z))}">${valTxt(z)}</span><span class="r-unit">${isW?"/100":"/3"}</span></div><div class="stat-lab">pescabilidade · <span style="color:${cc}">${cg} ${ct}</span></div></div>
-      <div class="stat"><div class="read"><span class="r-num" style="color:${heat(vt)}">${vv.toFixed(1)}</span><span class="r-unit">/3</span></div><div class="stat-lab">visibilidade · ${vlab}</div></div>
+  p.innerHTML=`<div class="pan-top">
+      <div class="pan-id"><div class="z-face">${z.face}</div><div class="z-name">${z.name}</div><div class="z-spots">${z.spots}</div></div>
+      <div class="reads">
+        <div class="stat"><div class="read"><span class="r-num" style="color:${heat(metric(z))}">${valTxt(z)}</span><span class="r-unit">${isW?"/100":"/3"}</span></div><div class="stat-lab">pescabilidade · <span style="color:${cc}">${cg} ${ct}</span></div></div>
+        <div class="stat"><div class="read"><span class="r-num" style="color:${heat(vt)}">${vv.toFixed(1)}</span><span class="r-unit">/3</span></div><div class="stat-lab">visibilidade · ${vlab}</div></div>
+      </div>
     </div>
     <div class="verd">${verdict(z)}</div>
-    <div class="lab">Pescabilidade dia a dia (0–3) · tracejado = baixa concordância</div>
-    <div class="strip">${cells}</div>
-    <div class="lab" style="margin-top:12px">Visibilidade dia a dia (0–3) · dias calmos acumulados</div>
-    <div class="strip">${vcells}</div>
-    <div class="lab" style="margin-top:12px">Melhor janela (pesca)</div><div style="font-size:12.5px;color:var(--muted)">${win}</div>
-    ${modelRows?`<div class="lab" style="margin-top:12px">Modelos — ${DAYS[+mode].lbl}</div><div class="models">${modelRows}</div>`:""}`;
+    <div class="pan-cols">
+      <div>
+        <p class="col-lab">Pescabilidade dia a dia (0–3) · tracejado = discórdia</p>
+        <div class="strip">${cells}</div>
+        <p class="col-lab" style="margin-top:14px">Melhor janela (pesca)</p>
+        <div style="font-size:12.5px;color:var(--muted)">${win}</div>
+      </div>
+      <div>
+        <p class="col-lab">Visibilidade dia a dia (0–3) · dias calmos</p>
+        <div class="strip">${vcells}</div>
+        ${modelRows?`<p class="col-lab" style="margin-top:14px">Modelos — ${DAYS[+mode].lbl}</p><div class="models">${modelRows}</div>`:`<p class="col-lab" style="margin-top:14px">Dica</p><div style="font-size:12.5px;color:var(--muted)">Escolhe um dia lá em cima para veres o swell no mapa e o que cada modelo prevê.</div>`}
+      </div>
+    </div>`;
 }
 function vizVal(z){return mode==="week"?z.vizWeek:z.viz[+mode]}
 function DSHORT_lbl(i){return DAYS[i]?DAYS[i].lbl.split(" ")[0]:""}
@@ -360,20 +390,27 @@ function verdict(z){
   if(z.week>=30)return `Talvez. Só uns dias dão: ${best.length?best.join(", "):"poucos"} — ${clear}. Escolhe bem.`;
   return `Não vais. Exposta ao que está a bater ${clear}. Nem penses, salvo ${best.join(", ")||"nenhum dia claro"}.`;
 }
-function ranklist(){
+function drawScatter(){
   if(!DATA)return;
-  const el=document.getElementById('rl');
-  const pv=z=>mode==="week"?z.week:z.day[+mode].mean, vv=z=>mode==="week"?z.vizWeek:z.viz[+mode];
-  const pmx=mode==="week"?100:3;
-  const arr=[...ZONES].sort((a,b)=>pv(b)-pv(a));
-  el.innerHTML=arr.map((z,i)=>{const pt=pv(z)/pmx,vt=vv(z)/3,[,cc,cg]=confTier(spreadOf(z));
-    const p=mode==="week"?z.week:pv(z).toFixed(1);
-    return `<div class="rr" data-id="${z.id}"><span class="rk">${i+1}</span><span class="nm">${z.face}</span><div class="bars">`+
-      `<div class="brow"><span class="bk">P</span><span class="track"><span class="fill" style="width:${pt*100}%;background:${heat(pt)}"></span></span><span class="bv">${p}</span></div>`+
-      `<div class="brow"><span class="bk">V</span><span class="track"><span class="fill" style="width:${vt*100}%;background:${heat(vt)}"></span></span><span class="bv">${vv(z).toFixed(1)}</span></div>`+
-      `</div><span class="cf" style="color:${cc}">${cg}</span></div>`}).join("");
-  el.querySelectorAll('.rr').forEach(r=>r.addEventListener('click',()=>select(r.dataset.id)));
-  document.getElementById('rt').textContent="Classificação"+(mode==="week"?" — 7 dias":" — "+DAYS[+mode].lbl);
+  const svg=document.getElementById('scatter');
+  const L=46,R=16,T=16,B=34,W=420,H=400,pw=W-L-R,ph=H-T-B,y0=H-B;
+  const X=f=>L+f*pw, Y=f=>y0-f*ph;
+  let h=`<rect x="${X(.5).toFixed(1)}" y="${Y(1).toFixed(1)}" width="${(pw*.5).toFixed(1)}" height="${(ph*.5).toFixed(1)}" fill="var(--aqua)" opacity=".06"/>`;
+  for(let i=0;i<=3;i++){const f=i/3;h+=`<line class="sc-grid" x1="${X(f).toFixed(1)}" y1="${T}" x2="${X(f).toFixed(1)}" y2="${y0}"/><text class="sc-axlab" x="${X(f).toFixed(1)}" y="${y0+15}" text-anchor="middle">${i}</text>`}
+  const yt=mode==="week"?[[0,"0"],[.5,"50"],[1,"100"]]:[[0,"0"],[.5,"1.5"],[1,"3"]];
+  yt.forEach(([f,l])=>{h+=`<line class="sc-grid" x1="${L}" y1="${Y(f).toFixed(1)}" x2="${W-R}" y2="${Y(f).toFixed(1)}"/><text class="sc-axlab" x="${L-7}" y="${(Y(f)+3).toFixed(1)}" text-anchor="end">${l}</text>`});
+  h+=`<text class="sc-axlab" x="${X(1)}" y="${y0+27}" text-anchor="end">visibilidade →</text>`;
+  h+=`<text class="sc-axlab" x="${(L-34)}" y="${T+4}" transform="rotate(-90 ${L-34} ${T+4})" text-anchor="end">pescabilidade →</text>`;
+  h+=`<text class="sc-quad" x="${W-R-5}" y="${T+13}" text-anchor="end">bora</text>`;
+  h+=`<text class="sc-quad" x="${L+5}" y="${y0-5}">fica</text>`;
+  ZONES.forEach(z=>{const px=X(vizVal(z)/3),py=Y(metric(z)),col=heat(metric(z)),low=spreadOf(z)>=1.3,[,cc]=confTier(spreadOf(z));
+    h+=`<g class="sc-mk" data-id="${z.id}" style="cursor:pointer">`+
+       `<circle class="sc-ring" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="14" style="opacity:${z.id===sel?1:0}"/>`+
+       `<circle class="sc-conf" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="12" stroke="${low?cc:'transparent'}"/>`+
+       `<circle class="sc-dot" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="8" fill="${col}" opacity="${low?.55:1}"/>`+
+       `<text class="sc-lab" x="${px.toFixed(1)}" y="${(py-12).toFixed(1)}" text-anchor="middle">${z.face}</text></g>`});
+  svg.innerHTML=h;
+  svg.querySelectorAll('.sc-mk').forEach(g=>g.addEventListener('click',()=>select(g.dataset.id)));
 }
 function meta(){
   const el=document.getElementById('meta');
@@ -384,8 +421,8 @@ function meta(){
   const dd=sd.length?dir16(sd.reduce((a,b)=>a+b,0)/sd.length):"—";
   el.innerHTML=`<b>${DAYS[i].lbl}.</b> Consenso: ondulação ${dd} ~${hh} m · setas mostram o swell médio (leque = dispersão entre modelos).`;
 }
-function select(id){sel=id;drawMarkers();panel()}
-function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();panel();ranklist();meta()}
+function select(id){sel=id;drawMarkers();drawScatter();panel()}
+function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();drawScatter();panel();meta()}
 
 buildMarkers();
 load().catch(e=>{
