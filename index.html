@@ -166,7 +166,7 @@
 
   <div class="foot">
     <p><b>Como funciona.</b> Para cada dia, cada modelo dá 0–3 a cada zona a partir da ondulação (direção/altura vs. exposição da costa, por interseção geométrica com a ilha) e do vento (offshore/onshore + intensidade). O que vês é a <b>média dos modelos</b>; a confiança vem de quanto concordam entre si (concordam → alta). O score de 7 dias premeia dias bons seguidos. Verde = bora, vermelho = fica em casa.</p>
-    <p style="margin-top:8px"><b>Visibilidade (eixo à parte).</b> A pescabilidade diz se dá para entrar; a visibilidade diz se vais ver alguma coisa lá dentro. Um dia conta como <b>calmo</b> para uma zona quando o vento médio é &lt;12 km/h <b>e</b> a ondulação bate fraca nessa costa. A visibilidade cresce com os dias calmos seguidos até ao próprio dia (com 7 dias de histórico para trás), saturando ~4–5 dias — água parada assenta o sedimento. Dia agitado → visibilidade baixa, por muitos dias calmos que tenha havido antes. No modo semana mostra-se o <b>melhor dia</b> da janela (não a média), e a escala 0–3 traduz-se em turva · média · boa · cristalina.</p>
+    <p style="margin-top:8px"><b>Visibilidade (eixo à parte).</b> A pescabilidade diz se dá para entrar; a visibilidade diz se vais ver alguma coisa lá dentro. Dois tempos diferentes: <b>(1)</b> a água limpa devagar — conta os <b>dias seguidos de costa protegida</b>, em que a onda total (swell + vento-mar, pesada pelo período e pela exposição da costa) bate fraca; só ao fim de vários dias é que o sedimento assenta (1 dia ainda é turva, ~4 dias → boa, ~7 → cristalina). <b>(2)</b> o <b>vento de hoje</b> não desfaz o que já assentou, mas pica a superfície — entra como fator do próprio dia (calmo → cheio, ventoso → corta até ~40%). Usa 7 dias de histórico para trás; no modo semana mostra-se o <b>melhor dia</b>. Escala 0–3 = turva · média · boa · cristalina.</p>
     <p style="margin-top:8px"><b>Fontes (Open-Meteo, ao vivo).</b> Ondulação: MFWAM (MétéoFrance/Copernicus, ~8 km), ECMWF-WAM (0,25°), GFS-Wave (NOAA, 0,25°). Vento: Open-Meteo best-match (médio + máximo diário). Nenhum modelo regional de alta resolução cobre os Açores, por isso o consenso + a boia da Praia da Vitória são o melhor caminho. Segurança: bóia, apneia, reservas e tamanhos mínimos; caça por fora da baía de Angra.</p>
   </div>
 
@@ -217,20 +217,23 @@ function scoreOne(zone,m){
   return Math.max(0,Math.min(3,3-swellPen-windPen-chop));
 }
 function sdir(m){return m.swellDir!=null?m.swellDir:m.waveDir}
-// visibility: a day is "calm" for a zone when wind is light AND swell hits the coast weakly
-const CALM_WIND=12, CALM_SWELL=0.6;
-function calmZoneDay(z,models){
-  const w=models.map(m=>m.windMean!=null?m.windMean:m.windSpd).find(v=>v!=null); // typical (mean) wind, not gust peak
-  if(w==null||w>=CALM_WIND)return false;
-  const es=models.filter(m=>m.swellH!=null||m.waveH!=null).map(m=>{
-    const H=(m.swellH!=null?m.swellH:m.waveH),dir=sdir(m);
-    const exp=dir==null?0.4:Math.max(0,cosd(dir-z.b));
-    return exp*H;                                          // swell energy hitting this coast
+// visibility model — two timescales:
+//  · accumulator: consecutive days of PROTECTED coast (low total-wave energy) — sediment settles over days
+//  · same-day: wind is a surface-chop factor, not part of the streak
+const PROT=0.4, VTAU=2.2;
+function protectedDay(z,models){                            // is this coast quiet enough today for sediment to settle?
+  const es=models.filter(m=>m.waveH!=null||m.swellH!=null).map(m=>{
+    const H=(m.waveH!=null?m.waveH:m.swellH);               // total wave (swell + wind-sea) stirs the bottom
+    const dir=(m.waveDir!=null?m.waveDir:m.swellDir);
+    const T=(m.swellT!=null?m.swellT:8);                    // long-period swell reaches deeper
+    const exp=dir==null?0.4:Math.max(0,cosd(dir-z.b));      // how head-on the waves hit this coast
+    return exp*H*(1+Math.max(0,(T-8))/10);
   });
   if(!es.length)return false;
-  return es.reduce((a,b)=>a+b,0)/es.length < CALM_SWELL;
+  return es.reduce((a,b)=>a+b,0)/es.length < PROT;
 }
-function vizScore(streak){return 3*(1-Math.pow(0.6,streak))} // 0..3, saturates ~4-5 calm days
+function clarity(p){return 3*(1-Math.exp(-(Math.max(0,p-1))/VTAU))} // 0..3; 1 day still turva, ~4 → boa, ~7 → cristalina
+function windFactor(w){return w==null?0.7:1-0.6*Math.min(1,Math.max(0,(w-8)/14))} // today's chop: 1.0 calm → 0.4 blown
 const GOOD=2, BASE=3*28;
 function weekRaw(arr){let r=0,run=0;for(const s of arr){if(s>=GOOD){run++;r+=s*run}else run=0}return r}
 function runs(arr){const o=[];let st=-1;for(let i=0;i<=arr.length;i++){const g=i<arr.length&&arr[i]>=GOOD;if(g&&st<0)st=i;if(!g&&st>=0){o.push([st,i-1]);st=-1}}return o}
@@ -276,10 +279,11 @@ async function load(){
     z.rounds=z.day.map(d=>d.round);
     z.week=Math.round(weekRaw(z.rounds)/BASE*100);
     z.avgSpread=z.day.reduce((a,b)=>a+b.spread,0)/z.day.length;
-    const calm=ALLDATA.map(models=>calmZoneDay(z,models));   // per full-window day
-    z.streak=DAYS.map((_,j)=>{let s=0;for(let k=START+j;k>=0;k--){if(calm[k])s++;else break}return s});
-    z.viz=z.streak.map(vizScore);
-    z.vizBest=Math.max(...z.viz);                     // week view: the best day, not a diluted mean
+    const prot=ALLDATA.map(models=>protectedDay(z,models));  // per full-window day
+    z.streak=DAYS.map((_,j)=>{let s=0;for(let k=START+j;k>=0;k--){if(prot[k])s++;else break}return s});
+    z.viz=DAYS.map((_,j)=>{const gi=START+j,wm=ALLDATA[gi].map(m=>m.windMean).find(v=>v!=null);
+      return clarity(z.streak[j])*windFactor(wm)});          // clareza acumulada × chop do próprio dia
+    z.vizBest=Math.max(...z.viz);                            // week view: the best day, not a diluted mean
     z.vizWeek=z.viz.reduce((a,b)=>a+b,0)/z.viz.length;
   });
   const windTxt=wd?"":" · vento indisponível (visibilidade limitada)";
@@ -364,7 +368,7 @@ function panel(){
   z.viz.forEach((v,i)=>{const t=v/3;
     vcells+=`<div class="cell"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar"><i style="height:${10+t*90}%;background:${heat(t)}"></i></div><span class="sv">${v.toFixed(1)}</span></div>`});
   const vv=vizVal(z),vt=vv/3;
-  const vlab=isW?`melhor dia · água ${vizWord(vv)}`:`${z.streak[+mode]} dia(s) calmo(s) · água ${vizWord(vv)}`;
+  const vlab=isW?`melhor dia · água ${vizWord(vv)}`:`${z.streak[+mode]} dia(s) de costa protegida · água ${vizWord(vv)}`;
   const [vword,vcls]=verdictShort(z), vsub=isW?"esta semana":DAYS[+mode].lbl;
   let modelRows="";
   if(!isW){const i=+mode;modelRows=DATA[i].map((m,k)=>`<div class="row"><span>${m.prov}</span><span>${m.swellH!=null?m.swellH.toFixed(1)+"m "+dir16(m.swellDir):(m.waveH!=null?m.waveH.toFixed(1)+"m":"—")} · vento ${m.windSpd!=null?Math.round(m.windSpd)+" "+dir16(m.windDir):"—"} · score ${scoreOne(z,m).toFixed(1)}</span></div>`).join("")}
@@ -385,7 +389,7 @@ function panel(){
         <div style="font-size:12.5px;color:var(--muted)">${win}</div>
       </div>
       <div>
-        <p class="col-lab">Visibilidade dia a dia (0–3) · dias calmos</p>
+        <p class="col-lab">Visibilidade dia a dia (0–3) · costa protegida</p>
         <div class="strip">${vcells}</div>
         ${modelRows?`<p class="col-lab" style="margin-top:14px">Modelos — ${DAYS[+mode].lbl}</p><div class="models">${modelRows}</div>`:`<p class="col-lab" style="margin-top:14px">Dica</p><div style="font-size:12.5px;color:var(--muted)">Escolhe um dia lá em cima para veres o swell no mapa e o que cada modelo prevê.</div>`}
       </div>
