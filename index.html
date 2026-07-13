@@ -42,9 +42,9 @@
   .mk-ring{fill:none;stroke:var(--ink);stroke-width:2;opacity:0}
   .mk[data-sel="1"] .mk-ring{opacity:1}
   .mk-conf{fill:none;stroke-width:2;stroke-dasharray:3 3}
-  .mk-num{font-family:var(--mono);font-weight:700;font-size:13px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3px}
-  .mk-tag{font-family:var(--mono);font-size:11px;fill:var(--ink);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3.5px}
-  .mk-win{font-family:var(--mono);font-size:9px;font-weight:700;fill:var(--aqua);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3px}
+  .mk-num{font-family:var(--mono);font-weight:700;font-size:17px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3.5px}
+  .mk-tag{font-family:var(--mono);font-size:14.5px;font-weight:600;fill:var(--ink);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:4px}
+  .mk-win{font-family:var(--mono);font-size:12.5px;font-weight:700;fill:var(--aqua);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3.5px}
   .pan{padding:15px}
   .z-face{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--aqua)}
   .z-name{font-size:18px;font-weight:600;margin:2px 0 0}
@@ -95,7 +95,7 @@
   .rsort button{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--sea-1);border:1px solid var(--line);border-radius:7px;padding:3px 9px;cursor:pointer}
   .rsort button[aria-pressed="true"]{color:var(--sea-0);background:var(--aqua);border-color:transparent;font-weight:700}
   /* balanced layout */
-  .stage{grid-template-columns:1fr 1fr;align-items:stretch}
+  .stage{grid-template-columns:1.3fr 1fr;align-items:stretch}
   @media(max-width:760px){.stage{grid-template-columns:1fr}}
   .stage>.card{display:flex;flex-direction:column;justify-content:center}
   .plot-cap{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:13px 16px 2px}
@@ -145,13 +145,13 @@
           <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
         </defs>
         <rect x="0" y="0" width="800" height="520" fill="var(--sea-0)"/>
-        <g transform="translate(744,58)">
-          <circle r="20" fill="none" stroke="var(--faint)"/>
-          <path d="M0,-20 L4,0 L-4,0 Z" fill="var(--muted)"/>
-          <text x="0" y="-25" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--muted)">N</text>
+        <g transform="translate(742,62)">
+          <circle r="25" fill="none" stroke="var(--faint)"/>
+          <path d="M0,-25 L6,2 L-6,2 Z" fill="var(--muted)"/>
+          <text x="0" y="-31" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--muted)">N</text>
         </g>
         <path id="island" fill="#16232b" stroke="#2c4551" stroke-width="1.5" stroke-linejoin="round" d=""/>
-        <text x="360" y="250" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--faint)">Terceira</text>
+        <text x="360" y="250" text-anchor="middle" font-family="var(--mono)" font-size="16" letter-spacing="1" fill="var(--faint)">Terceira</text>
         <g id="swell" color="#63d9ff" opacity="0"></g>
         <g id="wind" color="#e0b243" opacity="0"></g>
         <g id="markers"></g>
@@ -328,15 +328,15 @@ const gm=document.getElementById('markers');
 function buildMarkers(){
   gm.innerHTML="";
   ZONES.forEach(z=>{
-    const ly=z.y>CY?z.y-22:z.y+28;
+    const ly=z.y>CY?z.y-28:z.y+34;
     const g=document.createElementNS("http://www.w3.org/2000/svg","g");
     g.setAttribute("class","mk");g.setAttribute("tabindex","0");g.setAttribute("role","button");g.setAttribute("aria-label",z.face);
-    g.innerHTML=`<circle class="mk-ring" cx="${z.x}" cy="${z.y}" r="22"></circle>
-      <circle class="mk-conf" cx="${z.x}" cy="${z.y}" r="19"></circle>
-      <circle class="mk-dot" cx="${z.x}" cy="${z.y}" r="15"></circle>
+    g.innerHTML=`<circle class="mk-ring" cx="${z.x}" cy="${z.y}" r="28"></circle>
+      <circle class="mk-conf" cx="${z.x}" cy="${z.y}" r="25"></circle>
+      <circle class="mk-dot" cx="${z.x}" cy="${z.y}" r="19"></circle>
       <text class="mk-num" x="${z.x}" y="${z.y}"></text>
       <text class="mk-tag" x="${z.x}" y="${ly}">${z.face}</text>
-      <text class="mk-win" x="${z.x}" y="${z.y>CY?ly-11:ly+12}"></text>`;
+      <text class="mk-win" x="${z.x}" y="${z.y>CY?ly-15:ly+16}"></text>`;
     g.addEventListener("click",()=>select(z.id));
     g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(z.id)}});
     gm.appendChild(g);z.g=g;
@@ -350,7 +350,7 @@ function drawMarkers(){
     const t=metric(z),col=heat(t),[,c2,]=confTier(spreadOf(z));
     const dot=z.g.querySelector(".mk-dot");
     dot.setAttribute("fill",col);
-    dot.setAttribute("r",(mode==="week"?11+t*8:12+t*6).toFixed(1));
+    dot.setAttribute("r",(mode==="week"?15+t*9:15+t*8).toFixed(1));
     dot.setAttribute("opacity", spreadOf(z)>=1.3?0.55:1);
     const cf=z.g.querySelector(".mk-conf");
     cf.setAttribute("stroke", spreadOf(z)>=1.3?c2:"transparent");
@@ -373,11 +373,11 @@ function drawOverlay(){
   // model spread fan
   const mn=Math.min(...dirs),mx=Math.max(...dirs);
   if(mx-mn>8){[mn,mx].forEach(b=>{const[,, vx,vy]=intercept(b);h+=`<line x1="${(x)}" y1="${(y)}" x2="${(x+vx*40).toFixed(1)}" y2="${(y+vy*40).toFixed(1)}" stroke="currentColor" stroke-width="1" opacity=".4" stroke-dasharray="3 3"/>`})}
-  h+=`<text x="${(x+ux*66).toFixed(1)}" y="${(y+uy*66).toFixed(1)}" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="currentColor">swell</text>`;
+  h+=`<text x="${(x+ux*70).toFixed(1)}" y="${(y+uy*70).toFixed(1)}" text-anchor="middle" font-family="var(--mono)" font-size="14" fill="currentColor">swell</text>`;
   sw.innerHTML=h;sw.setAttribute("opacity","1");
   const wdirs=models.map(m=>m.windDir).filter(v=>v!=null);
   if(wdirs.length){const wm=wdirs.reduce((a,b)=>a+b,0)/wdirs.length,twx=-sind(wm),twy=cosd(wm),ax=80,ay=450;
-    wd.innerHTML=`<circle cx="${ax}" cy="${ay}" r="17" fill="none" stroke="currentColor" stroke-width="1" opacity=".35"/><line x1="${(ax-twx*13).toFixed(1)}" y1="${(ay-twy*13).toFixed(1)}" x2="${(ax+twx*13).toFixed(1)}" y2="${(ay+twy*13).toFixed(1)}" stroke="currentColor" stroke-width="2.5" marker-end="url(#ar)"/><text x="${ax}" y="${ay+31}" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="currentColor">vento</text>`;
+    wd.innerHTML=`<circle cx="${ax}" cy="${ay}" r="20" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".35"/><line x1="${(ax-twx*16).toFixed(1)}" y1="${(ay-twy*16).toFixed(1)}" x2="${(ax+twx*16).toFixed(1)}" y2="${(ay+twy*16).toFixed(1)}" stroke="currentColor" stroke-width="3" marker-end="url(#ar)"/><text x="${ax}" y="${ay+36}" text-anchor="middle" font-family="var(--mono)" font-size="14" fill="currentColor">vento</text>`;
     wd.setAttribute("opacity","1")}
 }
 function panel(){
