@@ -26,6 +26,7 @@
   .btn:hover{color:var(--ink);background:var(--sea-2)}
   .btn[aria-pressed="true"]{color:var(--sea-0);background:var(--aqua);border-color:transparent;font-weight:600}
   .btn.week[aria-pressed="true"]{background:var(--ink)}
+  .btn.inbora{border-color:rgba(47,227,160,.5);box-shadow:inset 0 -3px 0 rgba(47,227,160,.4)}
   .btn.best{border-color:var(--aqua)}
   .btn.best::after{content:"★ melhor";color:var(--aqua);font-size:9px;letter-spacing:.08em;margin-left:6px;vertical-align:1px}
   .btn.best[aria-pressed="true"]::after{color:var(--sea-0)}
@@ -43,6 +44,7 @@
   .mk-conf{fill:none;stroke-width:2;stroke-dasharray:3 3}
   .mk-num{font-family:var(--mono);font-weight:700;font-size:13px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3px}
   .mk-tag{font-family:var(--mono);font-size:11px;fill:var(--ink);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3.5px}
+  .mk-win{font-family:var(--mono);font-size:9px;font-weight:700;fill:var(--aqua);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--sea-0);stroke-width:3px}
   .pan{padding:15px}
   .z-face{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--aqua)}
   .z-name{font-size:18px;font-weight:600;margin:2px 0 0}
@@ -303,6 +305,10 @@ async function load(){
     z.vizWeek=z.viz.reduce((a,b)=>a+b,0)/z.viz.length;
     z.bestDay=0;{let bs=-1;for(let i=0;i<z.day.length;i++){         // best day to GO = pescabilidade weighted by visibilidade
       const s=(z.day[i].mean/3)*(0.4+0.6*z.viz[i]/3);if(s>bs){bs=s;z.bestDay=i}}}
+    z.bora=(function(){const f=z.day.map((d,i)=>d.mean>=1.8&&z.viz[i]>=1.2);  // dia Bora: pescável E visível
+      let b=[0,-1],s=-1;for(let i=0;i<=f.length;i++){const g=i<f.length&&f[i];
+        if(g&&s<0)s=i;if(!g&&s>=0){if(i-1-s>b[1]-b[0])b=[s,i-1];s=-1}}
+      return b[1]>=b[0]?b:null})();
   });
   const windTxt=wd?"":" · vento indisponível (visibilidade limitada)";
   document.getElementById('status').innerHTML=`<b>Ao vivo.</b> ${DAYS[0].iso} → ${DAYS[DAYS.length-1].iso} · ${ok.length} modelo(s) a votar: ${LOADED}${windTxt} · ${new Date().toLocaleString('pt-PT')}`;
@@ -330,7 +336,8 @@ function buildMarkers(){
       <circle class="mk-conf" cx="${z.x}" cy="${z.y}" r="19"></circle>
       <circle class="mk-dot" cx="${z.x}" cy="${z.y}" r="15"></circle>
       <text class="mk-num" x="${z.x}" y="${z.y}"></text>
-      <text class="mk-tag" x="${z.x}" y="${ly}">${z.face}</text>`;
+      <text class="mk-tag" x="${z.x}" y="${ly}">${z.face}</text>
+      <text class="mk-win" x="${z.x}" y="${z.y>CY?ly-11:ly+12}"></text>`;
     g.addEventListener("click",()=>select(z.id));
     g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(z.id)}});
     gm.appendChild(g);z.g=g;
@@ -349,6 +356,7 @@ function drawMarkers(){
     const cf=z.g.querySelector(".mk-conf");
     cf.setAttribute("stroke", spreadOf(z)>=1.3?c2:"transparent");
     z.g.querySelector(".mk-num").textContent=mode==="week"?z.week:z.day[+mode].round;
+    z.g.querySelector(".mk-win").textContent=mode==="week"?boraDays(z):"";
     z.g.setAttribute("data-sel",z.id===sel?"1":"0");
   });
 }
@@ -377,8 +385,7 @@ function panel(){
   const z=ZONES.find(x=>x.id===sel),p=document.getElementById('pan'),isW=mode==="week";
   if(!z){p.innerHTML=`<div class="z-face">escolhe uma zona</div><div class="z-name" style="color:var(--muted);font-weight:500;max-width:60ch">Toca numa zona — no mapa à esquerda ou no gráfico pescabilidade × visibilidade à direita — para veres o detalhe e o que cada modelo prevê.</div>`;return}
   const sp=spreadOf(z),[ct,cc,cg]=confTier(sp);
-  const br=bestRun(z.rounds),has=br[1]>=br[0];
-  const win=has?`<b>${br[1]-br[0]+1} dia(s) seguidos</b> — ${DSHORT_lbl(br[0])}${br[1]>br[0]?"–"+DSHORT_lbl(br[1]):""}`:"nenhuma — fica em casa";
+  const win=z.bora?`<b style="color:var(--aqua)">${DAYS[z.bora[0]].lbl}${z.bora[1]>z.bora[0]?" – "+DAYS[z.bora[1]].lbl:""}</b> · ${z.bora[1]-z.bora[0]+1} dia(s)`:"nenhuma esta semana — pescável mas água turva/agitada";
   let cells="";
   z.day.forEach((dd,i)=>{const t=dd.round/3,low=dd.spread>=1.3,bd=isW&&i===z.bestDay;
     cells+=`<div class="cell${bd?' best':''}"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar ${low?'low':''}"><i style="height:${25+t*75}%;background:${heat(t)}"></i></div><span class="sv">${dd.round}</span></div>`});
@@ -405,7 +412,7 @@ function panel(){
       <div>
         <p class="col-lab">Pescabilidade dia a dia (0–3) · tracejado = discórdia</p>
         <div class="strip">${cells}</div>
-        <p class="col-lab" style="margin-top:14px">Melhor janela (pesca)</p>
+        <p class="col-lab" style="margin-top:14px">Janela Bora (pescável + visível)</p>
         <div style="font-size:12.5px;color:var(--muted)">${win}</div>
       </div>
       <div>
@@ -417,6 +424,7 @@ function panel(){
 }
 function vizVal(z){return mode==="week"?z.vizBest:z.viz[+mode]}
 function vizWord(v){return v<0.7?"turva":v<1.4?"média":v<2.2?"boa":"cristalina"}
+function boraDays(z){if(!z.bora)return"";const a=DAYS[z.bora[0]].lbl.split(" ")[0],b=DAYS[z.bora[1]].lbl.split(" ")[0];return z.bora[0]===z.bora[1]?a:a+"–"+b}
 function verdictShort(z){const m=metric(z);return m>=.6?["BORA","vok"]:m>=.3?["TALVEZ","vmid"]:["NÃO","vno"]}
 function DSHORT_lbl(i){return DAYS[i]?DAYS[i].lbl.split(" ")[0]:""}
 function dir16(d){if(d==null)return"";const s=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];return s[Math.round(((d%360)/22.5))%16]}
@@ -444,8 +452,9 @@ function drawScatter(){
   // labels: 2D box declutter — each label box separates from other labels AND off every dot
   const HH=7, DOTR=11;
   const pts=ZONES.map(z=>{const px=X(vizVal(z)/3),py=Y(metric(z));
-    return{z,px,py,col:heat(metric(z)),low:spreadOf(z)>=1.3,cc:confTier(spreadOf(z))[1],
-      hw:Math.max(13,z.face.length*3.05),cx:px,cy:py-15}});
+    const lbl=z.face+(mode==="week"&&z.id===sel&&boraDays(z)?" · "+boraDays(z):"");
+    return{z,px,py,lbl,col:heat(metric(z)),low:spreadOf(z)>=1.3,cc:confTier(spreadOf(z))[1],
+      hw:Math.max(13,lbl.length*3.05),cx:px,cy:py-15}});
   const clamp=p=>{p.cx=Math.min(W-R-p.hw,Math.max(L+p.hw,p.cx));p.cy=Math.min(y0-6,Math.max(T+8,p.cy))};
   pts.forEach(clamp);
   for(let it=0;it<220;it++){let moved=false;
@@ -456,13 +465,13 @@ function drawScatter(){
       if(ox>0&&oy>0){if(ox<=oy)a.cx+=(dx<0?-1:1)*ox;else a.cy+=(dy<0?-1:1)*oy;moved=true}}
     pts.forEach(clamp);
     if(!moved)break}
-  pts.forEach(p=>{const {z,px,py,col,low,cc,cx,cy}=p, lead=Math.hypot(cx-px,cy-py)>22;
+  pts.forEach(p=>{const {z,px,py,col,low,cc,cx,cy,lbl}=p, lead=Math.hypot(cx-px,cy-py)>22;
     h+=`<g class="sc-mk" data-id="${z.id}" style="cursor:pointer">`+
        (lead?`<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="var(--faint)" stroke-width="1" opacity=".45"/>`:``)+
        `<circle class="sc-ring" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="14" style="opacity:${z.id===sel?1:0}"/>`+
        `<circle class="sc-conf" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="12" stroke="${low?cc:'transparent'}"/>`+
        `<circle class="sc-dot" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="8" fill="${col}" opacity="${low?.55:1}"/>`+
-       `<text class="sc-lab" x="${cx.toFixed(1)}" y="${(cy+3).toFixed(1)}" text-anchor="middle">${z.face}</text></g>`});
+       `<text class="sc-lab" x="${cx.toFixed(1)}" y="${(cy+3).toFixed(1)}" text-anchor="middle">${lbl}</text></g>`});
   svg.innerHTML=h;
   svg.querySelectorAll('.sc-mk').forEach(g=>g.addEventListener('click',()=>select(g.dataset.id)));
 }
@@ -476,9 +485,11 @@ function meta(){
   el.innerHTML=`<b>${DAYS[i].lbl}.</b> Consenso: ondulação ${dd} ~${hh} m · setas mostram o swell médio (leque = dispersão entre modelos).`;
 }
 function markBestDay(){
-  document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.classList.remove('best'));
+  document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.classList.remove('best','inbora'));
   const z=ZONES.find(x=>x.id===sel);
-  if(z){const b=document.querySelector(`#seg .btn[data-m="${z.bestDay}"]`);if(b)b.classList.add('best');}
+  if(!z)return;
+  if(z.bora)for(let i=z.bora[0];i<=z.bora[1];i++){const b=document.querySelector(`#seg .btn[data-m="${i}"]`);if(b)b.classList.add('inbora');}
+  const bb=document.querySelector(`#seg .btn[data-m="${z.bestDay}"]`);if(bb)bb.classList.add('best');
 }
 function select(id){sel=id;drawMarkers();drawScatter();panel();markBestDay()}
 function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();drawScatter();panel();meta();markBestDay()}
