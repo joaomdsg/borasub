@@ -26,6 +26,9 @@
   .btn:hover{color:var(--ink);background:var(--sea-2)}
   .btn[aria-pressed="true"]{color:var(--sea-0);background:var(--aqua);border-color:transparent;font-weight:600}
   .btn.week[aria-pressed="true"]{background:var(--ink)}
+  .btn.best{border-color:var(--aqua)}
+  .btn.best::after{content:"★ melhor";color:var(--aqua);font-size:9px;letter-spacing:.08em;margin-left:6px;vertical-align:1px}
+  .btn.best[aria-pressed="true"]::after{color:var(--sea-0)}
   .refresh{margin-left:auto;color:var(--aqua)}
   .meta{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:18px;margin:6px 0 14px}
   .meta b{color:var(--ink)}
@@ -462,8 +465,13 @@ function meta(){
   const dd=sd.length?dir16(sd.reduce((a,b)=>a+b,0)/sd.length):"—";
   el.innerHTML=`<b>${DAYS[i].lbl}.</b> Consenso: ondulação ${dd} ~${hh} m · setas mostram o swell médio (leque = dispersão entre modelos).`;
 }
-function select(id){sel=id;drawMarkers();drawScatter();panel()}
-function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();drawScatter();panel();meta()}
+function markBestDay(){
+  document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.classList.remove('best'));
+  const z=ZONES.find(x=>x.id===sel);
+  if(z){const b=document.querySelector(`#seg .btn[data-m="${z.bestDay}"]`);if(b)b.classList.add('best');}
+}
+function select(id){sel=id;drawMarkers();drawScatter();panel();markBestDay()}
+function setMode(m){mode=m;document.querySelectorAll('#seg .btn[data-m]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false"));drawMarkers();drawOverlay();drawScatter();panel();meta();markBestDay()}
 
 buildMarkers();
 load().catch(e=>{
