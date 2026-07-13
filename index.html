@@ -106,6 +106,10 @@
   .vbadge.vok .w{color:var(--aqua)}
   .vbadge.vmid .w{color:#e9b04a}
   .vbadge.vno .w{color:#e2564a}
+  .bestday{margin:10px 0 2px;padding:9px 13px;border-radius:10px;background:rgba(47,227,160,.1);border:1px solid rgba(47,227,160,.32);font-size:13px;color:var(--ink)}
+  .bestday b{color:var(--aqua);font-family:var(--mono);letter-spacing:.02em;text-transform:uppercase}
+  .cell.best .bar{outline:2px solid var(--aqua);outline-offset:1px}
+  .cell.best .d{color:var(--aqua)}
   .sc-dot{stroke:#04141c;stroke-width:2;cursor:pointer;transition:r .2s,opacity .2s}
   .sc-ring{fill:none;stroke:var(--ink);stroke-width:2;opacity:0}
   .sc-conf{fill:none;stroke-width:2;stroke-dasharray:3 3}
@@ -285,6 +289,8 @@ async function load(){
       return clarity(z.streak[j])*windFactor(wm)});          // clareza acumulada × chop do próprio dia
     z.vizBest=Math.max(...z.viz);                            // week view: the best day, not a diluted mean
     z.vizWeek=z.viz.reduce((a,b)=>a+b,0)/z.viz.length;
+    z.bestDay=0;{let bs=-1;for(let i=0;i<z.day.length;i++){         // best day to GO = pescabilidade weighted by visibilidade
+      const s=(z.day[i].mean/3)*(0.4+0.6*z.viz[i]/3);if(s>bs){bs=s;z.bestDay=i}}}
   });
   const windTxt=wd?"":" · vento indisponível (visibilidade limitada)";
   document.getElementById('status').innerHTML=`<b>Ao vivo.</b> ${DAYS[0].iso} → ${DAYS[DAYS.length-1].iso} · ${ok.length} modelo(s) a votar: ${LOADED}${windTxt} · ${new Date().toLocaleString('pt-PT')}`;
@@ -362,13 +368,13 @@ function panel(){
   const br=bestRun(z.rounds),has=br[1]>=br[0];
   const win=has?`<b>${br[1]-br[0]+1} dia(s) seguidos</b> — ${DSHORT_lbl(br[0])}${br[1]>br[0]?"–"+DSHORT_lbl(br[1]):""}`:"nenhuma — fica em casa";
   let cells="";
-  z.day.forEach((dd,i)=>{const t=dd.round/3,low=dd.spread>=1.3;
-    cells+=`<div class="cell"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar ${low?'low':''}"><i style="height:${25+t*75}%;background:${heat(t)}"></i></div><span class="sv">${dd.round}</span></div>`});
+  z.day.forEach((dd,i)=>{const t=dd.round/3,low=dd.spread>=1.3,bd=isW&&i===z.bestDay;
+    cells+=`<div class="cell${bd?' best':''}"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar ${low?'low':''}"><i style="height:${25+t*75}%;background:${heat(t)}"></i></div><span class="sv">${dd.round}</span></div>`});
   let vcells="";
-  z.viz.forEach((v,i)=>{const t=v/3;
-    vcells+=`<div class="cell"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar"><i style="height:${10+t*90}%;background:${heat(t)}"></i></div><span class="sv">${v.toFixed(1)}</span></div>`});
+  z.viz.forEach((v,i)=>{const t=v/3,bd=isW&&i===z.bestDay;
+    vcells+=`<div class="cell${bd?' best':''}"><span class="d">${DAYS[i].lbl.split(" ")[0]}</span><div class="bar"><i style="height:${10+t*90}%;background:${heat(t)}"></i></div><span class="sv">${v.toFixed(1)}</span></div>`});
   const vv=vizVal(z),vt=vv/3;
-  const vlab=isW?`melhor dia · água ${vizWord(vv)}`:`${z.streak[+mode]} dia(s) de costa protegida · água ${vizWord(vv)}`;
+  const vlab=isW?`água mais limpa · ${vizWord(vv)}`:`${z.streak[+mode]} dia(s) de costa protegida · água ${vizWord(vv)}`;
   const [vword,vcls]=verdictShort(z), vsub=isW?"esta semana":DAYS[+mode].lbl;
   let modelRows="";
   if(!isW){const i=+mode;modelRows=DATA[i].map((m,k)=>`<div class="row"><span>${m.prov}</span><span>${m.swellH!=null?m.swellH.toFixed(1)+"m "+dir16(m.swellDir):(m.waveH!=null?m.waveH.toFixed(1)+"m":"—")} · vento ${m.windSpd!=null?Math.round(m.windSpd)+" "+dir16(m.windDir):"—"} · score ${scoreOne(z,m).toFixed(1)}</span></div>`).join("")}
@@ -381,6 +387,7 @@ function panel(){
       <div class="stat"><div class="read"><span class="r-num" style="color:${heat(vt)}">${vv.toFixed(1)}</span><span class="r-unit">/3</span></div><div class="stat-lab">visibilidade · ${vlab}</div></div>
     </div>
     <div class="verd">${verdict(z)}</div>
+    ${isW?`<div class="bestday">Melhor dia — <b>${DAYS[z.bestDay].lbl}</b> · pescável ${z.day[z.bestDay].round}/3 · água ${vizWord(z.viz[z.bestDay])}</div>`:``}
     <div class="pan-cols">
       <div>
         <p class="col-lab">Pescabilidade dia a dia (0–3) · tracejado = discórdia</p>
