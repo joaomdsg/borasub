@@ -173,15 +173,15 @@
     <span><span class="sw" style="background:#2fe3a0"></span>ótimo</span>
     <span style="margin-left:8px;color:#5cc6e0;font-weight:600">visibilidade</span>
     <span><span class="sw" style="background:#40677e"></span>turva</span>
-    <span><span class="sw" style="background:#367a9c"></span>média</span>
-    <span><span class="sw" style="background:#34b1d0"></span>boa</span>
-    <span><span class="sw" style="background:#71dcf2"></span>cristalina</span>
+    <span><span class="sw" style="background:#367a9c"></span>fraca</span>
+    <span><span class="sw" style="background:#34b1d0"></span>média</span>
+    <span><span class="sw" style="background:#71dcf2"></span>boa</span>
     <span style="margin-left:8px;color:var(--faint)">● ◐ ○ concordância</span>
   </div>
 
   <div class="foot">
     <p><b>Como funciona.</b> Para cada dia, cada modelo dá 0–3 a cada zona a partir da ondulação (direção/altura vs. exposição da costa, por interseção geométrica com a ilha) e do vento (offshore/onshore + intensidade). O que vês é a <b>média dos modelos</b>; a confiança vem de quanto concordam entre si (concordam → alta). O score de 7 dias premeia dias bons seguidos. Verde = bora, vermelho = fica em casa.</p>
-    <p style="margin-top:8px"><b>Visibilidade (eixo à parte).</b> A pescabilidade diz se dá para entrar; a visibilidade diz se vais ver alguma coisa lá dentro. Dois tempos diferentes: <b>(1)</b> a água limpa devagar — conta os <b>dias seguidos de costa protegida</b>, em que a onda total (swell + vento-mar, pesada pelo período e pela exposição da costa) bate fraca; só ao fim de vários dias é que o sedimento assenta (1 dia ainda é turva, ~4 dias → boa, ~7 → cristalina). <b>(2)</b> o <b>vento de hoje</b> não desfaz o que já assentou, mas pica a superfície — entra como fator do próprio dia (calmo → cheio, ventoso → corta até ~40%). Usa 7 dias de histórico para trás; no modo semana mostra-se o <b>melhor dia</b>. Escala 0–3 = turva · média · boa · cristalina.</p>
+    <p style="margin-top:8px"><b>Visibilidade (eixo à parte).</b> A pescabilidade diz se dá para entrar; a visibilidade diz se vais ver alguma coisa lá dentro. Dois tempos diferentes: <b>(1)</b> a água limpa devagar — conta os <b>dias seguidos de costa protegida</b>, em que a onda total (swell + vento-mar, pesada pelo período e pela exposição da costa) bate fraca; só ao fim de vários dias é que o sedimento assenta (1 dia ainda é turva, ~4 dias → média, ~6–7 → boa). <b>(2)</b> o <b>vento de hoje</b> não desfaz o que já assentou, mas pica a superfície — entra como fator do próprio dia (calmo → cheio, ventoso → corta até ~40%). Usa 7 dias de histórico para trás; no modo semana mostra-se o <b>melhor dia</b>. Escala 0–3 = turva · fraca · média · boa.</p>
     <p style="margin-top:8px"><b>Fontes (Open-Meteo, ao vivo).</b> Ondulação: MFWAM (MétéoFrance/Copernicus, ~8 km), ECMWF-WAM (0,25°), GFS-Wave (NOAA, 0,25°). Vento: Open-Meteo best-match (médio + máximo diário). Nenhum modelo regional de alta resolução cobre os Açores, por isso o consenso + a boia da Praia da Vitória são o melhor caminho. Segurança: bóia, apneia, reservas e tamanhos mínimos; caça por fora da baía de Angra.</p>
   </div>
 
@@ -216,7 +216,7 @@ let LOADED="";
 const DSHORT=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const cosd=d=>Math.cos(d*Math.PI/180), sind=d=>Math.sin(d*Math.PI/180);
 const RAMP=[[0,[226,75,74]],[.5,[239,159,39]],[.78,[151,196,89]],[1,[47,227,160]]];  // pescabilidade: mau→ótimo (verde)
-const VRAMP=[[0,[70,92,108]],[.35,[54,122,156]],[.66,[52,190,220]],[1,[150,238,255]]]; // visibilidade: turva→cristalina (azul)
+const VRAMP=[[0,[70,92,108]],[.35,[54,122,156]],[.66,[52,190,220]],[1,[150,238,255]]]; // visibilidade: turva→boa (azul)
 function rampCol(R,t){t=Math.max(0,Math.min(1,t));let a=R[0],b=R[R.length-1];for(let i=0;i<R.length-1;i++){if(t>=R[i][0]&&t<=R[i+1][0]){a=R[i];b=R[i+1];break}}const f=(t-a[0])/((b[0]-a[0])||1),c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));return`rgb(${c[0]},${c[1]},${c[2]})`}
 function heat(t){return rampCol(RAMP,t)}
 function vizCol(v){return rampCol(VRAMP,v/3)}
@@ -250,7 +250,7 @@ function protectedDay(z,models){                            // is this coast qui
   if(!es.length)return false;
   return es.reduce((a,b)=>a+b,0)/es.length < PROT;
 }
-function clarity(p){return 3*(1-Math.exp(-(Math.max(0,p-1))/VTAU))} // 0..3; 1 day still turva, ~4 → boa, ~7 → cristalina
+function clarity(p){return 3*(1-Math.exp(-(Math.max(0,p-1))/VTAU))} // 0..3; 1 day still turva, ~4 → média, ~7 → boa
 function windFactor(w){return w==null?0.7:1-0.6*Math.min(1,Math.max(0,(w-8)/14))} // today's chop: 1.0 calm → 0.4 blown
 const GOOD=2, BASE=3*28;
 function weekRaw(arr){let r=0,run=0;for(const s of arr){if(s>=GOOD){run++;r+=s*run}else run=0}return r}
@@ -423,7 +423,7 @@ function panel(){
     </div>`;
 }
 function vizVal(z){return mode==="week"?z.vizBest:z.viz[+mode]}
-function vizWord(v){return v<0.7?"turva":v<1.4?"média":v<2.2?"boa":"cristalina"}
+function vizWord(v){return v<0.7?"turva":v<1.4?"fraca":v<2.2?"média":"boa"}
 function boraDays(z){if(!z.bora)return"";const a=DAYS[z.bora[0]].lbl.split(" ")[0],b=DAYS[z.bora[1]].lbl.split(" ")[0];return z.bora[0]===z.bora[1]?a:a+"–"+b}
 function verdictShort(z){const m=metric(z);return m>=.6?["BORA","vok"]:m>=.3?["TALVEZ","vmid"]:["NÃO","vno"]}
 function DSHORT_lbl(i){return DAYS[i]?DAYS[i].lbl.split(" ")[0]:""}
@@ -431,7 +431,7 @@ function dir16(d){if(d==null)return"";const s=["N","NNE","NE","ENE","E","ESE","S
 function verdict(z){
   const best=z.rounds.map((s,i)=>[s,i]).filter(a=>a[0]>=2).map(a=>DSHORT_lbl(a[1]));
   const v=vizVal(z);
-  const clear=v>=2.2?"e a água deve estar cristalina":v>=1.4?"e a água deve estar boa":v>=0.7?"mas a visibilidade anda média":"e a água deve estar turva";
+  const clear=v>=2.2?"e a visibilidade deve estar boa":v>=1.4?"mas a visibilidade anda média":v>=0.7?"e a visibilidade está fraca":"e a água deve estar turva";
   if(z.week>=60)return `Bora! Das melhores da semana — abrigada quase sempre (${best.join(", ")||"poucos"}) ${clear}.`;
   if(z.week>=30)return `Talvez. Só uns dias dão: ${best.length?best.join(", "):"poucos"} — ${clear}. Escolhe bem.`;
   return `Nem penses. Exposta ao que está a bater ${clear}. Fica em casa, salvo ${best.join(", ")||"nenhum dia claro"}.`;
