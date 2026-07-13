@@ -229,7 +229,7 @@ function scoreOne(zone,m){
   const dir=(m.swellDir!=null?m.swellDir:(m.waveDir!=null?m.waveDir:null));
   const exp=dir==null?0.4:Math.max(0,cosd(dir-zone.b));    // swell hitting this coast
   const swellPen=1.8*exp*H;
-  const offsh=(m.windDir!=null)?cosd(m.windDir-zone.b):0;   // +1 offshore, -1 onshore
+  const offsh=(m.windDir!=null)?-cosd(m.windDir-zone.b):0;  // +1 offshore (vento de terra), -1 onshore (do mar). windDir = de onde vem
   const windPen=1.6*((m.windSpd||0)/30)*(0.5-0.5*offsh);
   const chop=Math.max(0,((m.windSpd||0)-28))/22;
   return Math.max(0,Math.min(3,3-swellPen-windPen-chop));
